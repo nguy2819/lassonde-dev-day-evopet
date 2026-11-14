@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader, Panel } from "@/components/care/bits";
 import { Badge } from "@/components/ui/badge";
 import { requireStaff, ROLE_LABEL } from "@/lib/care";
-import { isSupabaseConfigured } from "@/lib/env";
+import { isDatabaseConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   const rows: [string, string][] = [
     ["Signed in as", actor.displayName],
     ["Role", ROLE_LABEL[actor.role]],
-    ["Data source", isSupabaseConfigured() ? "Supabase (RLS enforced)" : "In-memory demo store"],
+    ["Data source", isDatabaseConfigured() ? "Postgres / Neon (RLS enforced)" : "In-memory demo store"],
     ["Journal access", actor.role === "organization_admin" ? "Never automatic for admins" : "Only with explicit member consent"],
     ["Alert wording", "“Needs review” (no risk scores)"],
   ];

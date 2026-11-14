@@ -1,5 +1,5 @@
 /**
- * In-memory repository used when Supabase is not configured (local demos,
+ * In-memory repository used when DATABASE_URL is not set (local demos,
  * preview deployments). It enforces the same rules as the RLS policies via
  * lib/permissions. Data resets when the server restarts.
  */

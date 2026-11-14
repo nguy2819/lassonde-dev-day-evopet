@@ -51,6 +51,17 @@ export const onboardingSchema = z.object({
   goals: z.array(z.string().max(60)).max(5).default([]),
 });
 
+export const signInSchema = z.object({
+  email: z.email("Please enter a valid email address.").max(254),
+  password: z.string().min(1, "Please enter your password.").max(200),
+});
+
+export const signUpSchema = z.object({
+  displayName: z.string().trim().min(1, "Please tell us what to call you.").max(80),
+  email: z.email("Please enter a valid email address.").max(254),
+  password: z.string().min(10, "Use at least 10 characters.").max(200),
+});
+
 export const demoSessionSchema = z.object({
   role: z.enum(["patient", "supporter", "clinician", "organization_admin"]),
 });

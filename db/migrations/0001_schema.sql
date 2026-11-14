@@ -1,9 +1,19 @@
--- EvoPet: Recovery Journey · core schema
+-- EvoPet: Recovery Journey · core schema (Neon / any Postgres 15+)
 -- Recovery support / care engagement MVP. Not a diagnostic or treatment system.
 
 create extension if not exists pgcrypto;
-
 create schema if not exists app;
+
+-- ---------------------------------------------------------------------------
+-- Request identity. The server sets these per transaction:
+--   set local role app_user;
+--   select set_config('app.user_id', '<uuid>', true);
+-- RLS policies read them through app.uid().
+-- ---------------------------------------------------------------------------
+create or replace function app.uid()
+returns uuid language sql stable as $$
+  select nullif(current_setting('app.user_id', true), '')::uuid;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- Enums
@@ -27,7 +37,7 @@ create table public.organizations (
 );
 
 create table public.profiles (
-  id uuid primary key references auth.users (id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
   role public.app_role not null default 'patient',
   display_name text not null default 'Member' check (char_length(display_name) <= 80),
   -- Pseudonym is what care teams see by default.
@@ -40,6 +50,22 @@ create table public.profiles (
   created_at timestamptz not null default now(),
   deletion_requested_at timestamptz
 );
+
+-- Authentication (server-only: the app_user role has no access to these tables).
+create table public.accounts (
+  profile_id uuid primary key references public.profiles (id) on delete cascade,
+  email text not null unique check (email = lower(email) and email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+  password_hash text not null,
+  created_at timestamptz not null default now()
+);
+
+create table public.sessions (
+  token_hash text primary key,
+  profile_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+create index sessions_profile_idx on public.sessions (profile_id);
 
 create table public.organization_members (
   organization_id uuid not null references public.organizations (id) on delete cascade,
@@ -159,7 +185,7 @@ create table public.alerts (
   resolved_by uuid references public.profiles (id)
 );
 
--- Append-only. No update/delete policies exist for anyone.
+-- Append-only. No update/delete policies or grants exist for the app role.
 create table public.audit_logs (
   id bigint generated always as identity primary key,
   actor_id uuid references public.profiles (id) on delete set null,
@@ -172,34 +198,16 @@ create table public.audit_logs (
 create index audit_logs_org_idx on public.audit_logs (organization_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
--- New users always start as patients. Staff roles are granted by an
--- organization admin or the service role, never self-assigned at sign-up.
+-- Integrity triggers
 -- ---------------------------------------------------------------------------
-create or replace function app.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.profiles (id, display_name)
-  values (new.id, coalesce(nullif(new.raw_user_meta_data ->> 'display_name', ''), 'Member'));
-  insert into public.pets (owner_id) values (new.id);
-  return new;
-end;
-$$;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function app.handle_new_user();
-
--- Block users from escalating their own role.
+-- Only the server's privileged connection (not app_user) may change roles.
 create or replace function app.prevent_role_change()
 returns trigger
 language plpgsql
 as $$
 begin
-  if new.role is distinct from old.role and coalesce(auth.role(), '') <> 'service_role' then
+  if new.role is distinct from old.role and current_user = 'app_user' then
     raise exception 'Role changes must be made by an administrator.';
   end if;
   return new;

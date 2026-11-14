@@ -10,7 +10,7 @@ A recovery-support and care-engagement MVP. Members check in, complete small rea
 | Area | Route | Notes |
 |---|---|---|
 | Marketing site | `/` | Hero, companion picker, benefits, how it works, care teams, privacy, resources |
-| Sign-in | `/sign-in` | Demo personas (no DB), or Supabase magic link |
+| Sign-in | `/sign-in` | Email + password (database mode) and demo personas |
 | Onboarding | `/onboarding` | Disclaimer + data consent → choose companion → goals |
 | Member app | `/app/home`, `/journey`, `/checkin`, `/circle`, `/profile` | Mobile bottom nav, desktop sidebar |
 | Supporter view | `/support` | Only what the member shared |
@@ -52,23 +52,29 @@ components/
 lib/
   permissions.ts           consent + role rules (mirrors RLS)
   validation.ts            Zod schemas, care-card rule
-  auth.ts                  getActor(): Supabase session or demo cookie
+  auth.ts                  getActor(): database session or demo cookie
+  db.ts                    pg pool; withUser() runs queries as app_user under RLS
+  passwords.ts             scrypt hashing, session tokens (SHA-256 stored)
   data/
     repo.ts                Repo interface
     demo-repo.ts           in-memory store (default, no DB needed)
-    supabase-repo.ts       Supabase implementation (RLS-scoped)
+    postgres-repo.ts       Postgres/Neon implementation (RLS-scoped)
     analytics.ts           shared aggregations
     seed.ts                deterministic fictional seed (10 members, 30 days)
-supabase/migrations/       schema + RLS + audit triggers
-scripts/seed.ts            seeds a Supabase project
-tests/                     Vitest: permissions, validation, analytics
-proxy.ts                   Next 16 proxy: session refresh + optimistic route guard
+db/migrations/             schema + RLS + audit triggers
+scripts/migrate.ts         applies db/migrations once each
+scripts/seed.ts            seeds fictional data + demo accounts
+scripts/local-db.ts        local Postgres via PGlite (no Docker)
+tests/                     Vitest: permissions, validation, analytics, RLS on real Postgres
+proxy.ts                   Next 16 proxy: optimistic route guard + security headers
 ```
 
 - **Server components by default.** Client components only for interactive parts (forms, charts, the member app state, animation).
-- **Two data modes.** If `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` are unset, everything runs on the in-memory demo store with persona sign-in, which is good for pitches and Vercel previews. Set them and the same routes use Supabase with RLS.
+- **Two data modes.** Without `DATABASE_URL`, everything runs on the in-memory demo store with persona sign-in, which is good for pitches and Vercel previews. Set it and the same routes use Postgres (Neon) with RLS.
+- **How RLS works without Supabase.** The server connects as the database owner. For every user request, `withUser()` opens a transaction, runs `SET LOCAL ROLE app_user` and `set_config('app.user_id', …, true)`. Policies read the caller through `app.uid()`. `app_user` has no access at all to `accounts` and `sessions`. This works with Neon's pooled (PgBouncer transaction mode) connections because everything is transaction-scoped.
+- **Auth.** Email + password, hashed with scrypt. Sessions are random 256-bit tokens in an httpOnly cookie, and only their SHA-256 is stored. Self sign-up always creates a `patient`; staff roles are assigned by an admin or the seed script.
 - **Defense in depth.** RLS is the source of truth. `lib/permissions.ts` applies the same rules before data leaves the server, and the unit tests cover it.
-- **Member-side preferences** (companion, reminders, gentle day) are persisted in `localStorage` for the demo. In Supabase mode, onboarding also writes `pets` and `profiles`.
+- **Member-side preferences** (companion, reminders, gentle day) are persisted in `localStorage` for the demo. In database mode, onboarding also writes `pets` and `profiles`.
 
 ## Data model & RLS
 
@@ -87,8 +93,9 @@ Consent scopes, from least to most shared: `nothing` → `completion_only` → `
 | Mood scores need `checkin_summary` | `consented viewers read checkin scores` |
 | Dashboards get completion data only through a consent-filtered function | `public.visible_daily_activity()` |
 | Every consent / permission / link / invitation change is audited | `app.audit_change()` triggers |
-| Audit log is append-only | no update/delete policies |
-| Users cannot self-assign staff roles | sign-up trigger always creates `patient`; `prevent_role_change` trigger |
+| Audit log is append-only | `app_user` has only SELECT/INSERT on `audit_logs` |
+| Users cannot self-assign staff roles | sign-up creates `patient`; `prevent_role_change` trigger blocks `app_user` |
+| Credentials are unreachable from user queries | no grants on `accounts` / `sessions` |
 | Consents are versioned | change = revoke old row + insert new row |
 
 ## API
@@ -111,7 +118,10 @@ All handlers validate with Zod and return `{ error: "validation_error", issues: 
 | POST | `/api/onboarding` | patient |
 | GET | `/api/account/export` | signed-in user |
 | DELETE | `/api/account` (`{ "confirm": "DELETE" }`) | patient |
-| POST | `/api/demo/session` | demo mode only |
+| POST | `/api/auth/sign-up` | public (creates a patient) |
+| POST | `/api/auth/sign-in` | public |
+| POST | `/api/auth/sign-out` | signed-in user |
+| POST | `/api/demo/session` | demo mode, or `ENABLE_DEMO_LOGIN=true` |
 
 ## Run locally (demo mode, no database)
 
@@ -125,49 +135,50 @@ npm run dev          # http://localhost:3000
 Open `/sign-in` and pick a persona: **Alex** (member), **Jordan** (supporter), **Dr. Sam Rivera** (clinician), **Priya Shah** (admin). Demo data resets when the server restarts.
 
 ```bash
-npm test             # Vitest: permissions, validation, analytics
+npm test             # Vitest: permissions, validation, analytics, RLS (runs real Postgres in-process)
 npm run typecheck
 npm run lint
 npm run build
 ```
 
-## Set up Supabase
+## Set up the database (Neon)
 
-1. Create a project at supabase.com.
-2. Apply the migrations, either with the CLI:
-   ```bash
-   npx supabase login
-   npx supabase link --project-ref <your-ref>
-   npx supabase db push
-   ```
-   or by pasting `supabase/migrations/*.sql` into the SQL editor, in filename order.
-3. In **Authentication → URL Configuration**, add `http://localhost:3000/api/auth/callback` (and your Vercel URL) as redirect URLs.
-4. Copy env vars:
+1. Create a free project at neon.tech and copy its connection string (**Connect** → connection string).
+2. Configure env vars:
    ```bash
    cp .env.example .env.local
-   # fill NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
-   # SUPABASE_SERVICE_ROLE_KEY, SEED_DEMO_PASSWORD
+   # DATABASE_URL=postgresql://...neon.tech/neondb?sslmode=require
+   # SEED_DEMO_PASSWORD=<at least 10 characters>
+   # ENABLE_DEMO_LOGIN=true   (optional, keeps persona buttons)
    ```
-5. Seed fictional data (creates auth users like `alex@demo.evopet.test`):
+3. Create the schema and seed fictional data:
    ```bash
-   npm run db:seed
+   npm run db:migrate
+   npm run db:seed      # prints demo accounts like alex@demo.evopet.test
    ```
-6. `npm run dev`, then sign in with a magic link. Set `ENABLE_DEMO_LOGIN=true` if you also want the persona buttons.
+4. `npm run dev` and sign in with a demo account and SEED_DEMO_PASSWORD, or create a new account.
 
-The service-role key is used only by `scripts/seed.ts`. It is never imported into request handlers.
+### Local Postgres without Docker or a cloud account
+
+```bash
+npm run db:local     # PGlite on 127.0.0.1:5433, data in ./.pglite
+# .env.local:
+#   DATABASE_URL=postgresql://postgres@127.0.0.1:5433/postgres
+#   DATABASE_POOL_MAX=1
+npm run db:migrate && npm run db:seed && npm run dev
+```
 
 ## Deploy to Vercel
 
 ```bash
 npm i -g vercel
 vercel                # link + preview deploy
-vercel env add NEXT_PUBLIC_SUPABASE_URL
-vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+vercel env add DATABASE_URL
 vercel --prod
 ```
 
-Or import the GitHub repo in the Vercel dashboard (framework: Next.js, defaults are fine). Without Supabase env vars the deployment runs in demo mode. Note that serverless instances don't share memory, so demo writes may not persist between requests. Use Supabase for anything beyond a walkthrough.
+Or import the GitHub repo in the Vercel dashboard (framework: Next.js, defaults are fine). You can also use the Neon integration in the Vercel marketplace, which sets `DATABASE_URL` for you. Run `npm run db:migrate` and `npm run db:seed` once from your machine against that URL. Without `DATABASE_URL` the deployment runs in demo mode; serverless instances don't share memory, so demo writes may not persist between requests.
 
 ## Before real patients
 
-This is a prototype. Before production use you would still need, at minimum: a clinical safety review of all copy and the care-card rule, region-specific crisis resources, legal review (HIPAA / GDPR / local health-data law as applicable), a DPA with Supabase/Vercel, penetration testing, a hard-delete job for `deletion_requested_at`, real email delivery for invitations with token acceptance, and accessibility testing with assistive-technology users. No compliance certification is claimed.
+This is a prototype. Before production use you would still need, at minimum: a clinical safety review of all copy and the care-card rule, region-specific crisis resources, legal review (HIPAA / GDPR / local health-data law as applicable), DPAs with Neon/Vercel, rate limiting and lockout on sign-in, password reset and email verification, penetration testing, a hard-delete job for `deletion_requested_at`, real email delivery for invitations with token acceptance, and accessibility testing with assistive-technology users. No compliance certification is claimed.

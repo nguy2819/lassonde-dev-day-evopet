@@ -1,12 +1,12 @@
 import "server-only";
-import { isSupabaseConfigured } from "../env";
+import { isDatabaseConfigured } from "../env";
 import { demoRepo } from "./demo-repo";
 import type { Repo } from "./repo";
 
 export async function getRepo(): Promise<Repo> {
-  if (isSupabaseConfigured()) {
-    const { supabaseRepo } = await import("./supabase-repo");
-    return supabaseRepo;
+  if (isDatabaseConfigured()) {
+    const { postgresRepo } = await import("./postgres-repo");
+    return postgresRepo;
   }
   return demoRepo;
 }

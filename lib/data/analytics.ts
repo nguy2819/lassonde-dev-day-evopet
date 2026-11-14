@@ -1,5 +1,5 @@
 /**
- * Pure aggregation helpers shared by the demo store and the Supabase repo.
+ * Pure aggregation helpers shared by the demo store and the Postgres repo.
  * Every function receives rows that have ALREADY been filtered by consent.
  */
 import { effectiveConsent, scopeAllows, type PermissionContext } from "../permissions";

@@ -5,6 +5,38 @@
 --   * Clinicians see only linked patients in their organization, within consent scope.
 --   * Organization admins never automatically read journal entries.
 --   * Every permission / consent change is written to audit_logs by trigger.
+--
+-- The server connects as the database owner, then runs every user request as
+-- the non-privileged role `app_user` (SET LOCAL ROLE), so these policies apply.
+
+-- ---------------------------------------------------------------------------
+-- Request role
+-- ---------------------------------------------------------------------------
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'app_user') then
+    create role app_user nologin;
+  end if;
+end
+$$;
+-- Let the connecting (owner) role switch into app_user.
+do $$
+begin
+  execute format('grant app_user to %I', current_user);
+exception when others then
+  raise notice 'grant app_user to % skipped: %', current_user, sqlerrm;
+end
+$$;
+
+grant usage on schema public, app to app_user;
+grant select, insert, update, delete on
+  public.profiles, public.pets, public.daily_tasks, public.task_completions,
+  public.mood_checkins, public.journal_entries, public.sharing_consents,
+  public.invitations, public.alerts, public.organizations,
+  public.organization_members, public.patient_care_team_links
+to app_user;
+grant select, insert on public.audit_logs to app_user;
+-- accounts and sessions are intentionally NOT granted.
 
 -- ---------------------------------------------------------------------------
 -- Helper functions (SECURITY DEFINER so policies don't recurse through RLS)
@@ -19,16 +51,11 @@ returns int language sql immutable as $$
   end;
 $$;
 
-create or replace function app.user_role()
-returns public.app_role language sql stable security definer set search_path = public as $$
-  select role from public.profiles where id = auth.uid();
-$$;
-
 create or replace function app.is_org_member(org uuid, roles public.app_role[] default array['clinician','organization_admin']::public.app_role[])
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from public.organization_members m
-    where m.organization_id = org and m.profile_id = auth.uid() and m.role = any (roles)
+    where m.organization_id = org and m.profile_id = app.uid() and m.role = any (roles)
   );
 $$;
 
@@ -39,7 +66,7 @@ returns boolean language sql stable security definer set search_path = public as
     select 1 from public.patient_care_team_links l
     where l.patient_id = patient and l.active
       and (
-        l.clinician_id = auth.uid()
+        l.clinician_id = app.uid()
         or app.is_org_member(l.organization_id, array['organization_admin']::public.app_role[])
       )
   );
@@ -49,15 +76,13 @@ $$;
 create or replace function app.has_consent(patient uuid, min_scope public.consent_scope)
 returns boolean language sql stable security definer set search_path = public as $$
   select
-    patient = auth.uid()
-    -- supporter with explicit consent
+    patient = app.uid()
     or exists (
       select 1 from public.sharing_consents c
       where c.patient_id = patient and c.revoked_at is null
-        and c.grantee_profile_id = auth.uid()
+        and c.grantee_profile_id = app.uid()
         and app.scope_rank(c.scope) >= app.scope_rank(min_scope)
     )
-    -- clinician directly linked, or org admin, through an org-level consent
     or exists (
       select 1
       from public.patient_care_team_links l
@@ -66,7 +91,7 @@ returns boolean language sql stable security definer set search_path = public as
       where l.patient_id = patient and l.active
         and app.scope_rank(c.scope) >= app.scope_rank(min_scope)
         and (
-          l.clinician_id = auth.uid()
+          l.clinician_id = app.uid()
           or app.is_org_member(l.organization_id, array['organization_admin']::public.app_role[])
         )
     );
@@ -76,11 +101,11 @@ $$;
 create or replace function app.can_read_journal(patient uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select
-    patient = auth.uid()
+    patient = app.uid()
     or exists (
       select 1 from public.sharing_consents c
       where c.patient_id = patient and c.revoked_at is null and c.include_journal
-        and c.grantee_profile_id = auth.uid()
+        and c.grantee_profile_id = app.uid()
     )
     or exists (
       select 1
@@ -88,7 +113,7 @@ returns boolean language sql stable security definer set search_path = public as
       join public.sharing_consents c
         on c.patient_id = l.patient_id and c.grantee_org_id = l.organization_id
        and c.revoked_at is null and c.include_journal
-      where l.patient_id = patient and l.active and l.clinician_id = auth.uid()
+      where l.patient_id = patient and l.active and l.clinician_id = app.uid()
     );
 $$;
 
@@ -108,122 +133,125 @@ alter table public.sharing_consents enable row level security;
 alter table public.invitations enable row level security;
 alter table public.alerts enable row level security;
 alter table public.audit_logs enable row level security;
+alter table public.accounts enable row level security;
+alter table public.sessions enable row level security;
 
 -- organizations ---------------------------------------------------------------
 create policy "members read their organization" on public.organizations
-  for select using (app.is_org_member(id) or exists (
-    select 1 from public.patient_care_team_links l where l.organization_id = id and l.patient_id = auth.uid()
+  for select to app_user using (app.is_org_member(id) or exists (
+    select 1 from public.patient_care_team_links l where l.organization_id = id and l.patient_id = app.uid()
   ));
 
 -- profiles --------------------------------------------------------------------
 create policy "read own profile" on public.profiles
-  for select using (id = auth.uid());
+  for select to app_user using (id = app.uid());
 create policy "care team reads linked patient profile" on public.profiles
-  for select using (app.is_care_team_for(id));
+  for select to app_user using (app.is_care_team_for(id));
 create policy "supporter reads consenting patient profile" on public.profiles
-  for select using (exists (
+  for select to app_user using (exists (
     select 1 from public.sharing_consents c
-    where c.patient_id = profiles.id and c.grantee_profile_id = auth.uid() and c.revoked_at is null
+    where c.patient_id = profiles.id and c.grantee_profile_id = app.uid() and c.revoked_at is null
   ));
 create policy "staff read colleagues" on public.profiles
-  for select using (exists (
+  for select to app_user using (exists (
     select 1 from public.organization_members m
     where m.profile_id = profiles.id and app.is_org_member(m.organization_id)
   ));
 create policy "update own profile" on public.profiles
-  for update using (id = auth.uid()) with check (id = auth.uid());
+  for update to app_user using (id = app.uid()) with check (id = app.uid());
 
 -- organization_members ----------------------------------------------------------
 create policy "staff read org roster" on public.organization_members
-  for select using (app.is_org_member(organization_id));
+  for select to app_user using (app.is_org_member(organization_id) or profile_id = app.uid());
 create policy "admins manage org roster" on public.organization_members
-  for all using (app.is_org_member(organization_id, array['organization_admin']::public.app_role[]))
+  for all to app_user using (app.is_org_member(organization_id, array['organization_admin']::public.app_role[]))
   with check (app.is_org_member(organization_id, array['organization_admin']::public.app_role[]));
 
 -- patient_care_team_links ------------------------------------------------------
 create policy "patient reads own links" on public.patient_care_team_links
-  for select using (patient_id = auth.uid());
+  for select to app_user using (patient_id = app.uid());
 create policy "clinician reads own links" on public.patient_care_team_links
-  for select using (clinician_id = auth.uid());
+  for select to app_user using (clinician_id = app.uid());
 create policy "admin manages org links" on public.patient_care_team_links
-  for all using (app.is_org_member(organization_id, array['organization_admin']::public.app_role[]))
+  for all to app_user using (app.is_org_member(organization_id, array['organization_admin']::public.app_role[]))
   with check (app.is_org_member(organization_id, array['organization_admin']::public.app_role[]));
 
 -- pets ------------------------------------------------------------------------
 create policy "owner manages pet" on public.pets
-  for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+  for all to app_user using (owner_id = app.uid()) with check (owner_id = app.uid());
 create policy "consented viewers read pet" on public.pets
-  for select using (app.has_consent(owner_id, 'completion_only'));
+  for select to app_user using (app.has_consent(owner_id, 'completion_only'));
 
 -- daily_tasks / task_completions ----------------------------------------------
 create policy "patient manages own tasks" on public.daily_tasks
-  for all using (patient_id = auth.uid()) with check (patient_id = auth.uid());
+  for all to app_user using (patient_id = app.uid()) with check (patient_id = app.uid());
 create policy "consented viewers read tasks" on public.daily_tasks
-  for select using (app.has_consent(patient_id, 'completion_only'));
+  for select to app_user using (app.has_consent(patient_id, 'completion_only'));
 
 create policy "patient manages own completions" on public.task_completions
-  for all using (patient_id = auth.uid()) with check (
-    patient_id = auth.uid()
-    and exists (select 1 from public.daily_tasks t where t.id = task_id and t.patient_id = auth.uid())
+  for all to app_user using (patient_id = app.uid()) with check (
+    patient_id = app.uid()
+    and exists (select 1 from public.daily_tasks t where t.id = task_id and t.patient_id = app.uid())
   );
 create policy "consented viewers read completions" on public.task_completions
-  for select using (app.has_consent(patient_id, 'completion_only'));
+  for select to app_user using (app.has_consent(patient_id, 'completion_only'));
 
 -- mood_checkins: scores need the check-in summary scope ------------------------
 create policy "patient manages own checkins" on public.mood_checkins
-  for all using (patient_id = auth.uid()) with check (patient_id = auth.uid());
+  for all to app_user using (patient_id = app.uid()) with check (patient_id = app.uid());
 create policy "consented viewers read checkin scores" on public.mood_checkins
-  for select using (app.has_consent(patient_id, 'checkin_summary'));
+  for select to app_user using (app.has_consent(patient_id, 'checkin_summary'));
 
 -- journal_entries: explicit journal consent only ------------------------------
 create policy "patient manages own journal" on public.journal_entries
-  for all using (patient_id = auth.uid()) with check (patient_id = auth.uid());
+  for all to app_user using (patient_id = app.uid()) with check (patient_id = app.uid());
 create policy "explicitly consented viewers read journal" on public.journal_entries
-  for select using (patient_id <> auth.uid() and app.can_read_journal(patient_id));
+  for select to app_user using (patient_id <> app.uid() and app.can_read_journal(patient_id));
 
 -- sharing_consents ------------------------------------------------------------
 create policy "patient reads own consents" on public.sharing_consents
-  for select using (patient_id = auth.uid());
+  for select to app_user using (patient_id = app.uid());
 create policy "patient grants consent" on public.sharing_consents
-  for insert with check (patient_id = auth.uid());
+  for insert to app_user with check (patient_id = app.uid());
 create policy "patient revokes consent" on public.sharing_consents
-  for update using (patient_id = auth.uid()) with check (patient_id = auth.uid());
+  for update to app_user using (patient_id = app.uid()) with check (patient_id = app.uid());
 create policy "supporter reads consents granted to them" on public.sharing_consents
-  for select using (grantee_profile_id = auth.uid());
+  for select to app_user using (grantee_profile_id = app.uid());
 create policy "care team reads org consents" on public.sharing_consents
-  for select using (grantee_org_id is not null and app.is_org_member(grantee_org_id));
+  for select to app_user using (grantee_org_id is not null and app.is_org_member(grantee_org_id));
 
 -- invitations -----------------------------------------------------------------
 create policy "patient manages own invitations" on public.invitations
-  for all using (patient_id = auth.uid()) with check (patient_id = auth.uid());
+  for all to app_user using (patient_id = app.uid()) with check (patient_id = app.uid());
 
 -- alerts ----------------------------------------------------------------------
 create policy "patient creates own alert" on public.alerts
-  for insert with check (patient_id = auth.uid());
+  for insert to app_user with check (patient_id = app.uid());
 create policy "care team reads consented alerts" on public.alerts
-  for select using (
+  for select to app_user using (
     app.is_org_member(organization_id)
     and app.is_care_team_for(patient_id)
     and app.has_consent(patient_id, 'completion_only')
   );
 create policy "linked clinician resolves alerts" on public.alerts
-  for update using (exists (
+  for update to app_user using (exists (
     select 1 from public.patient_care_team_links l
-    where l.patient_id = alerts.patient_id and l.clinician_id = auth.uid() and l.active
+    where l.patient_id = alerts.patient_id and l.clinician_id = app.uid() and l.active
   ));
 
 -- audit_logs (append-only) ----------------------------------------------------
 create policy "users write own audit entries" on public.audit_logs
-  for insert with check (actor_id = auth.uid());
+  for insert to app_user with check (actor_id = app.uid());
 create policy "users read own audit entries" on public.audit_logs
-  for select using (actor_id = auth.uid());
+  for select to app_user using (actor_id = app.uid());
 create policy "org staff read org audit log" on public.audit_logs
-  for select using (organization_id is not null and app.is_org_member(organization_id));
--- No update or delete policies: audit history cannot be altered via the API.
+  for select to app_user using (organization_id is not null and app.is_org_member(organization_id));
+
+-- accounts / sessions: no policies → app_user can never read them.
 
 -- ---------------------------------------------------------------------------
 -- Audit triggers: every permission / consent change is logged in the database,
--- so it cannot be skipped by a client.
+-- so it cannot be skipped by application code.
 -- ---------------------------------------------------------------------------
 create or replace function app.audit_change()
 returns trigger
@@ -235,13 +263,10 @@ declare
   rec jsonb := to_jsonb(coalesce(new, old));
   org uuid;
 begin
-  org := coalesce(
-    (rec ->> 'organization_id')::uuid,
-    (rec ->> 'grantee_org_id')::uuid
-  );
+  org := coalesce((rec ->> 'organization_id')::uuid, (rec ->> 'grantee_org_id')::uuid);
   insert into public.audit_logs (actor_id, action, resource, organization_id, metadata)
   values (
-    auth.uid(),
+    app.uid(),
     tg_table_name || '.' || lower(tg_op),
     tg_table_name || '/' || coalesce(rec ->> 'id', rec ->> 'profile_id', 'unknown'),
     org,
@@ -289,5 +314,4 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 revoke all on function public.visible_daily_activity(date) from public;
-grant execute on function public.visible_daily_activity(date) to authenticated;
-grant usage on schema app to authenticated;
+grant execute on function public.visible_daily_activity(date) to app_user;

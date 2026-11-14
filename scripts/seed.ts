@@ -1,140 +1,121 @@
 /**
- * Seeds a Supabase project with the same fictional demo data used by the
- * in-memory store. Uses the service-role key, so run it locally only.
+ * Seeds Postgres (Neon or local) with the same fictional demo data used by the
+ * in-memory store. Re-runnable: it replaces only the seeded organizations and
+ * profiles (fixed ids), never other data.
  *
  *   npm run db:seed
  *
- * Creates auth users <name>@demo.evopet.test with SEED_DEMO_PASSWORD.
+ * Demo accounts: <name>@demo.evopet.test with SEED_DEMO_PASSWORD.
  */
 import { config } from "dotenv";
-import { createClient } from "@supabase/supabase-js";
+import { Client } from "pg";
 import { buildSeed } from "../lib/data/seed";
+import { hashPassword } from "../lib/passwords";
 
 config({ path: ".env.local" });
 config();
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const password = process.env.SEED_DEMO_PASSWORD;
-
-if (!url || !serviceKey || !password) {
-  console.error("Missing NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY or SEED_DEMO_PASSWORD in .env.local");
-  process.exit(1);
-}
-
-const sb = createClient(url, serviceKey, { auth: { persistSession: false } });
-const seed = buildSeed();
-
-function check<T>(res: { data: T; error: { message: string } | null }, label: string): T {
-  if (res.error) throw new Error(`${label}: ${res.error.message}`);
-  return res.data;
-}
-
-const slug = (s: string) => s.toLowerCase().replace(/\(.*?\)/g, "").replace(/[^a-z0-9]+/g, ".").replace(/^\.|\.$/g, "");
+const slug = (s: string) => s.toLowerCase().replace(/\(.*?\)/g, "").replace(/^dr\.\s*/, "").replace(/[^a-z0-9]+/g, ".").replace(/^\.|\.$/g, "");
 
 async function main() {
-  console.log("Seeding EvoPet demo data…");
+  const url = process.env.DATABASE_URL;
+  const password = process.env.SEED_DEMO_PASSWORD;
+  if (!url || !password) throw new Error("Set DATABASE_URL and SEED_DEMO_PASSWORD in .env.local");
+  if (password.length < 10) throw new Error("SEED_DEMO_PASSWORD must be at least 10 characters");
 
-  // 1. Organizations keep their fixed ids.
-  check(await sb.from("organizations").upsert(seed.organizations.map((o) => ({ id: o.id, name: o.name }))), "organizations");
+  const seed = buildSeed();
+  const db = new Client({ connectionString: url, ssl: url.includes("neon.tech") || /sslmode=require/.test(url) ? { rejectUnauthorized: true } : undefined });
+  await db.connect();
+  const q = (text: string, params: unknown[] = []) => db.query(text, params);
 
-  // 2. Auth users. The on_auth_user_created trigger creates profiles + pets.
-  const idMap = new Map<string, string>();
-  const { data: existing } = await sb.auth.admin.listUsers({ perPage: 1000 });
-  for (const p of seed.profiles) {
-    const email = `${slug(p.displayName)}@demo.evopet.test`;
-    let user = existing?.users.find((u) => u.email === email);
-    if (!user) {
-      const created = await sb.auth.admin.createUser({ email, password: password!, email_confirm: true, user_metadata: { display_name: p.displayName } });
-      if (created.error) throw new Error(`createUser ${email}: ${created.error.message}`);
-      user = created.data.user!;
+  try {
+    await q("begin");
+    const orgIds = seed.organizations.map((o) => o.id);
+    const profileIds = seed.profiles.map((p) => p.id);
+    await q(`delete from audit_logs where organization_id = any($1) or actor_id = any($2)`, [orgIds, profileIds]);
+    await q(`delete from profiles where id = any($1)`, [profileIds]); // cascades to everything they own
+    await q(`delete from organizations where id = any($1)`, [orgIds]);
+
+    for (const o of seed.organizations) await q(`insert into organizations (id, name) values ($1, $2)`, [o.id, o.name]);
+
+    const hash = await hashPassword(password);
+    console.log("Demo accounts:");
+    for (const p of seed.profiles) {
+      await q(
+        `insert into profiles (id, role, display_name, pseudonym, created_at, onboarded_at, disclaimer_acknowledged_at) values ($1, $2, $3, $4, $5, $5, $5)`,
+        [p.id, p.role, p.displayName, p.pseudonym, p.createdAt],
+      );
+      const email = `${slug(p.displayName)}@demo.evopet.test`;
+      await q(`insert into accounts (profile_id, email, password_hash) values ($1, $2, $3)`, [p.id, email, hash]);
+      console.log(`  ${p.role.padEnd(18)} ${email}`);
     }
-    idMap.set(p.id, user.id);
-    console.log(`  ${p.role.padEnd(18)} ${email}`);
-  }
-  const id = (seedId: string) => idMap.get(seedId) ?? seedId;
 
-  // 3. Profiles: roles can only be set with the service role.
-  for (const p of seed.profiles) {
-    check(
-      await sb.from("profiles").update({ role: p.role, display_name: p.displayName, pseudonym: p.pseudonym, onboarded_at: p.createdAt, disclaimer_acknowledged_at: p.createdAt }).eq("id", id(p.id)),
-      "profiles",
-    );
-  }
-
-  // 4. Organization membership + care-team links.
-  const staff = seed.profiles.filter((p) => p.role === "clinician" || p.role === "organization_admin");
-  check(await sb.from("organization_members").upsert(staff.map((s) => ({ organization_id: s.organizationId!, profile_id: id(s.id), role: s.role }))), "organization_members");
-  check(
-    await sb.from("patient_care_team_links").upsert(
-      seed.links.map((l) => ({ patient_id: id(l.patientId), clinician_id: id(l.clinicianId), organization_id: l.organizationId, active: l.active })),
-      { onConflict: "patient_id,clinician_id,organization_id" },
-    ),
-    "links",
-  );
-
-  // 5. Pets.
-  for (const pet of seed.pets) {
-    check(await sb.from("pets").update({ species: pet.species, name: pet.name, care_points: pet.carePoints }).eq("owner_id", id(pet.ownerId)), "pets");
-  }
-
-  // 6. Consents (clear active ones first so the script is re-runnable).
-  check(await sb.from("sharing_consents").delete().in("patient_id", [...new Set(seed.consents.map((c) => id(c.patientId)))]), "clear consents");
-  check(
-    await sb.from("sharing_consents").insert(
-      seed.consents.map((c) => ({
-        patient_id: id(c.patientId),
-        grantee_type: c.granteeType,
-        grantee_profile_id: c.granteeType === "supporter" ? id(c.granteeId) : null,
-        grantee_org_id: c.granteeType === "care_team" ? c.granteeId : null,
-        scope: c.scope,
-        include_journal: c.includeJournal,
-        granted_at: c.grantedAt,
-      })),
-    ),
-    "consents",
-  );
-
-  // 7. 30 days of tasks, completions and check-ins.
-  const patientIds = [...new Set(seed.records.map((r) => id(r.patientId)))];
-  check(await sb.from("daily_tasks").delete().in("patient_id", patientIds), "clear tasks");
-  check(await sb.from("mood_checkins").delete().in("patient_id", patientIds), "clear checkins");
-  const titles = [
-    ["checkin", "Mood check-in", true],
-    ["routine", "Medication reminder", true],
-    ["grounding", "5-minute grounding", false],
-  ] as const;
-  for (const r of seed.records) {
-    const tasks = check(
-      await sb
-        .from("daily_tasks")
-        .insert(titles.map(([kind, title, gentle]) => ({ patient_id: id(r.patientId), task_date: r.date, kind, title, gentle, minutes: kind === "grounding" ? 5 : 2 })))
-        .select("id"),
-      "tasks",
-    );
-    const done = (tasks ?? []).slice(0, r.tasksDone).map((t) => ({ task_id: t.id, patient_id: id(r.patientId), completed_at: `${r.date}T18:00:00Z` }));
-    if (done.length) check(await sb.from("task_completions").insert(done), "completions");
-    if (r.checkedIn) {
-      check(
-        await sb.from("mood_checkins").insert({ patient_id: id(r.patientId), mood: r.mood, energy: r.energy, stress: r.stress, supported: r.supported, created_at: `${r.date}T09:30:00Z` }),
-        "checkins",
+    for (const s of seed.profiles.filter((p) => p.role === "clinician" || p.role === "organization_admin")) {
+      await q(`insert into organization_members (organization_id, profile_id, role) values ($1, $2, $3)`, [s.organizationId, s.id, s.role]);
+    }
+    for (const l of seed.links) {
+      await q(`insert into patient_care_team_links (patient_id, clinician_id, organization_id, active) values ($1, $2, $3, $4)`, [l.patientId, l.clinicianId, l.organizationId, l.active]);
+    }
+    for (const pet of seed.pets) {
+      await q(`insert into pets (owner_id, species, name, care_points) values ($1, $2, $3, $4)`, [pet.ownerId, pet.species, pet.name, pet.carePoints]);
+    }
+    for (const c of seed.consents) {
+      await q(
+        `insert into sharing_consents (patient_id, grantee_type, grantee_profile_id, grantee_org_id, scope, include_journal, granted_at) values ($1, $2, $3, $4, $5, $6, $7)`,
+        [c.patientId, c.granteeType, c.granteeType === "supporter" ? c.granteeId : null, c.granteeType === "care_team" ? c.granteeId : null, c.scope, c.includeJournal, c.grantedAt],
       );
     }
+
+    // 30 days of tasks, completions and check-ins.
+    const plan = [
+      ["checkin", "Mood check-in", true, 2],
+      ["routine", "Medication reminder", true, 1],
+      ["grounding", "5-minute grounding", false, 5],
+    ] as const;
+    for (const r of seed.records) {
+      for (let i = 0; i < plan.length; i++) {
+        const [kind, title, gentle, minutes] = plan[i];
+        const { rows } = await q(
+          `insert into daily_tasks (patient_id, task_date, kind, title, gentle, minutes) values ($1, $2::date, $3, $4, $5, $6) returning id`,
+          [r.patientId, r.date, kind, title, gentle, minutes],
+        );
+        if (i < r.tasksDone) {
+          await q(`insert into task_completions (task_id, patient_id, completed_at) values ($1, $2, $3::date + time '18:00')`, [rows[0].id, r.patientId, r.date]);
+        }
+      }
+      if (r.checkedIn) {
+        await q(
+          `insert into mood_checkins (patient_id, mood, energy, stress, supported, created_at) values ($1, $2, $3, $4, $5, $6::date + time '09:30')`,
+          [r.patientId, r.mood, r.energy, r.stress, r.supported, r.date],
+        );
+      }
+    }
+
+    for (const j of seed.journal) await q(`insert into journal_entries (patient_id, body, created_at) values ($1, $2, $3)`, [j.patientId, j.body, j.createdAt]);
+    for (const i of seed.invitations) {
+      await q(`insert into invitations (patient_id, email, relationship, scope, created_at) values ($1, $2, $3, $4, $5)`, [i.patientId, i.email, i.relationship, i.scope, i.createdAt]);
+    }
+    for (const a of seed.alerts) {
+      await q(`insert into alerts (patient_id, organization_id, kind, summary, created_at, resolved_at) values ($1, $2, $3, $4, $5, $6)`, [a.patientId, a.organizationId, a.kind, a.summary, a.createdAt, a.resolvedAt]);
+    }
+    // Replace trigger-generated audit rows from seeding with the curated demo history.
+    await q(`delete from audit_logs where organization_id = any($1) or actor_id = any($2) or actor_id is null`, [orgIds, profileIds]);
+    for (const l of seed.auditLogs) {
+      await q(`insert into audit_logs (actor_id, action, resource, organization_id, metadata, created_at) values ($1, $2, $3, $4, $5, $6)`, [
+        l.actorId, l.action, l.resource, l.organizationId, JSON.stringify(l.metadata ?? {}), l.createdAt,
+      ]);
+    }
+    await q("commit");
+    console.log(`Seeded ${seed.profiles.length} profiles and ${seed.records.length} days of activity.`);
+  } catch (e) {
+    await q("rollback");
+    throw e;
+  } finally {
+    await db.end();
   }
-
-  // 8. Journal, invitations, alerts, audit history.
-  check(await sb.from("journal_entries").insert(seed.journal.map((j) => ({ patient_id: id(j.patientId), body: j.body, created_at: j.createdAt }))), "journal");
-  check(await sb.from("invitations").insert(seed.invitations.map((i) => ({ patient_id: id(i.patientId), email: i.email, relationship: i.relationship, scope: i.scope, created_at: i.createdAt }))), "invitations");
-  check(await sb.from("alerts").insert(seed.alerts.map((a) => ({ patient_id: id(a.patientId), organization_id: a.organizationId, kind: a.kind, summary: a.summary, created_at: a.createdAt, resolved_at: a.resolvedAt }))), "alerts");
-  check(
-    await sb.from("audit_logs").insert(seed.auditLogs.map((l) => ({ actor_id: id(l.actorId), action: l.action, resource: l.resource, organization_id: l.organizationId, metadata: l.metadata ?? {}, created_at: l.createdAt }))),
-    "audit_logs",
-  );
-
-  console.log(`Done. Sign in with any address above and the SEED_DEMO_PASSWORD.`);
 }
 
 main().catch((e) => {
-  console.error(e);
+  console.error(e.message ?? e);
   process.exit(1);
 });

@@ -1,7 +1,7 @@
 /**
  * Application-level permission helper.
  *
- * This mirrors the Row Level Security policies in supabase/migrations so the
+ * This mirrors the Row Level Security policies in db/migrations so the
  * UI and the API redact data the same way the database does. RLS remains the
  * source of truth: never rely on this helper alone for authorization.
  */
