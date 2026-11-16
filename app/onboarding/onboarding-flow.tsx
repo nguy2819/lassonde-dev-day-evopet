@@ -154,16 +154,18 @@ export function OnboardingFlow({ displayName }: { displayName?: string }) {
               {step === 1 && (
                 <section aria-labelledby="s1">
                   <h1 id="s1" className="text-2xl font-extrabold text-ink sm:text-3xl">Make it yours</h1>
-                  <p className="mt-2 text-ink-muted">Pick a colour and a name. You can change both later in your profile.</p>
+                  <p className="mt-2 text-ink-muted">
+                    {PETS[species].accessory
+                      ? `Pick a colour for ${petName.trim() || PETS[species].defaultName}'s ${PETS[species].accessory.label.toLowerCase()} and a name.`
+                      : "Give your companion a name."}{" "}
+                    You can change this later in your profile.
+                  </p>
                   <div className="mt-6 grid items-center gap-6 sm:grid-cols-[auto_1fr]">
                     <div className="mx-auto">
-                      <Mascot species={species} color={color} mood="thriving" size={190} label={`${petName || "Your companion"}, ${PET_COLORS.find((c) => c.id === color)?.label} colour`} />
+                      <Mascot species={species} color={color} mood="thriving" size="fill" className="w-44 sm:w-56" label={PETS[species].accessory ? `${petName || "Your companion"} wearing a ${PET_COLORS.find((c) => c.id === color)?.label} ${PETS[species].accessory.label.toLowerCase()}` : petName || "Your companion"} />
                     </div>
                     <div className="space-y-5">
-                      <div>
-                        <p className="mb-2 text-sm font-semibold text-ink">Colour</p>
-                        <PetColorPicker species={species} value={color} onChange={setColor} />
-                      </div>
+                      <PetColorPicker species={species} value={color} onChange={setColor} />
                       <div className="max-w-xs">
                         <Label htmlFor="pet-name">Name your companion</Label>
                         <Input id="pet-name" value={petName} maxLength={24} onChange={(e) => setPetName(e.target.value)} aria-describedby="pet-name-err" />

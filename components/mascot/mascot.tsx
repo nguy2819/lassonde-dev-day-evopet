@@ -9,12 +9,12 @@
  */
 import { motion, useReducedMotion } from "framer-motion";
 import { useId } from "react";
-import { PET_SPECIES, PETS, petColorFilter, type PetColor, type PetMood, type PetSpecies } from "@/lib/pets";
+import { PET_SPECIES, PETS, petColorHue, type PetColor, type PetMood, type PetSpecies } from "@/lib/pets";
 import { cn } from "@/lib/utils";
 
 interface MascotProps {
   species: PetSpecies;
-  /** Colour preset chosen by the member (tints the halo and frame). */
+  /** Colour preset chosen by the member; recolours the companion's accessory only. */
   color?: PetColor;
   mood?: PetMood;
   /**
@@ -67,17 +67,17 @@ export function Mascot({
           <div
             aria-hidden
             className={cn("absolute -inset-[10%] rounded-full opacity-70 blur-2xl", move && "animate-[halo_6s_ease-in-out_infinite]")}
-            style={{ background: `radial-gradient(circle, ${pet.palette[1]} 0%, ${pet.palette[0]} 45%, transparent 70%)`, filter: petColorFilter(color) }}
+            style={{ background: `radial-gradient(circle, ${pet.palette[1]} 0%, ${pet.palette[0]} 45%, transparent 70%)` }}
           />
           <div
             aria-hidden
             className={cn("absolute inset-0 shadow-[0_18px_40px_-18px_rgba(20,60,90,0.55)]", radius)}
-            style={{ background: `linear-gradient(135deg, ${pet.palette.join(",")})`, filter: petColorFilter(color), transition: "filter 0.4s ease" }}
+            style={{ background: `linear-gradient(135deg, ${pet.palette.join(",")})` }}
           />
         </>
       )}
       <div className={cn("absolute overflow-hidden bg-[#9fe3ea]", radius, withScene ? "inset-[5%]" : "inset-0")}>
-        <WaterPicture src={pet.image} alt={alt} ripple={ripple} />
+        <WaterPicture src={pet.image} alt={alt} ripple={ripple} mask={pet.accessory?.mask} hue={pet.accessory ? petColorHue(color, pet.species) : 0} />
         {move && (
           <>
             <span aria-hidden className="water-caustics" />
@@ -89,19 +89,53 @@ export function Mascot({
   );
 }
 
-/** The companion photo; with `ripple`, the lower (water) half shimmers like a pool. */
-function WaterPicture({ src, alt, ripple }: { src: string; alt: string; ripple: boolean }) {
+/**
+ * The companion photo; with `ripple`, the lower (water) half shimmers like a pool.
+ * When `hue` is set, a hue-shifted copy is drawn through the accessory `mask`,
+ * so only that piece of clothing changes colour.
+ */
+function WaterPicture({ src, alt, ripple, mask: accMask, hue }: { src: string; alt: string; ripple: boolean; mask?: string; hue: number }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const tint = Boolean(accMask && hue);
 
   if (!ripple) {
-    // eslint-disable-next-line @next/next/no-img-element -- small pre-optimised webp, sized by its container
-    return <img src={src} alt={alt} loading="lazy" decoding="async" draggable={false} className="size-full object-cover" />;
+    return (
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element -- small pre-optimised webp, sized by its container */}
+        <img src={src} alt={alt} loading="lazy" decoding="async" draggable={false} className="size-full object-cover" />
+        {tint && (
+          // eslint-disable-next-line @next/next/no-img-element -- same image, recoloured through the accessory mask
+          <img
+            src={src}
+            alt=""
+            aria-hidden
+            decoding="async"
+            draggable={false}
+            className="absolute inset-0 size-full object-cover"
+            style={{
+              filter: `hue-rotate(${hue}deg)`,
+              maskImage: `url(${accMask})`,
+              WebkitMaskImage: `url(${accMask})`,
+              maskSize: "cover",
+              WebkitMaskSize: "cover",
+              maskPosition: "center",
+              WebkitMaskPosition: "center",
+              maskRepeat: "no-repeat",
+              WebkitMaskRepeat: "no-repeat",
+            }}
+          />
+        )}
+      </>
+    );
   }
 
   const soft = `soft-${id}`;
   const wave = `wave-${id}`;
   const mask = `mask-${id}`;
   const grad = `grad-${id}`;
+  const pic = `pic-${id}`;
+  const shift = `shift-${id}`;
+  const acc = `acc-${id}`;
   // Slightly oversized so displaced edges never reveal the background.
   const img = { href: src, x: -4, y: -4, width: 108, height: 108, preserveAspectRatio: "xMidYMid slice" } as const;
 
@@ -129,10 +163,25 @@ function WaterPicture({ src, alt, ripple }: { src: string; alt: string; ripple: 
         <mask id={mask}>
           <rect width="100" height="100" fill={`url(#${grad})`} />
         </mask>
+        {tint && (
+          <>
+            <filter id={shift} colorInterpolationFilters="sRGB">
+              <feColorMatrix type="hueRotate" values={String(hue)} />
+            </filter>
+            <mask id={acc} maskUnits="userSpaceOnUse" x="-4" y="-4" width="108" height="108">
+              <image {...img} href={accMask} />
+            </mask>
+          </>
+        )}
+        {/* The picture (with any recoloured accessory) is composed once, then rippled. */}
+        <g id={pic}>
+          <image {...img} />
+          {tint && <image {...img} filter={`url(#${shift})`} mask={`url(#${acc})`} />}
+        </g>
       </defs>
-      <image {...img} filter={`url(#${soft})`} />
+      <use href={`#${pic}`} filter={`url(#${soft})`} />
       <g mask={`url(#${mask})`}>
-        <image {...img} filter={`url(#${wave})`} />
+        <use href={`#${pic}`} filter={`url(#${wave})`} />
       </g>
     </svg>
   );

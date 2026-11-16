@@ -74,8 +74,10 @@ export function ProfileView() {
             </button>
           ))}
         </div>
-        <p className="mb-2 mt-4 text-sm font-semibold text-ink">Colour</p>
-        <PetColorPicker species={state.species} value={state.color} onChange={(color) => update({ color })} size="sm" />
+        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <Mascot species={state.species} color={state.color} size={120} withScene={false} label={`${state.petName}, your companion`} />
+          <PetColorPicker species={state.species} value={state.color} onChange={(color) => update({ color })} size="sm" className="min-w-0" />
+        </div>
         <div className="mt-4 flex max-w-sm items-end gap-2">
           <div className="flex-1">
             <Label htmlFor="pname">Name</Label>

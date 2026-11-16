@@ -22,9 +22,21 @@ export interface PetOption {
   palette: [string, string, string];
   theme: PetTheme;
   image: string;
+  /**
+   * The piece of clothing a member can recolour, with its original colour.
+   * `mask` is an alpha mask covering just that piece (made by scripts/pet-masks.cjs).
+   * Companions without one keep their look as is.
+   */
+  accessory: { label: string; color: string; mask: string } | null;
 }
 
-const pet = (o: Omit<PetOption, "image">): PetOption => ({ ...o, image: `/pets/${o.species}.webp` });
+type PetInput = Omit<PetOption, "image" | "accessory"> & { accessory?: { label: string; color: string } };
+
+const pet = ({ accessory, ...o }: PetInput): PetOption => ({
+  ...o,
+  image: `/pets/${o.species}.webp`,
+  accessory: accessory ? { ...accessory, mask: `/pets/masks/${o.species}.png` } : null,
+});
 
 export const PETS: Record<PetSpecies, PetOption> = {
   mouse: pet({
@@ -36,6 +48,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Anyone who needs permission to slow down",
     palette: ["#fff2a8", "#9fe6e0", "#ffc9b5"],
     theme: "lagoon",
+    accessory: { label: "Bow tie", color: "#e88160" },
   }),
   ox: pet({
     species: "ox",
@@ -46,6 +59,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Long, steady recovery journeys",
     palette: ["#a9b4ff", "#9fd8ff", "#ffe2c4"],
     theme: "lagoon",
+    accessory: { label: "Bandana", color: "#70a3cd" },
   }),
   tiger: pet({
     species: "tiger",
@@ -56,6 +70,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Building confidence one step at a time",
     palette: ["#ffd58a", "#ffb3c8", "#a6ecd9"],
     theme: "garden",
+    accessory: { label: "Bandana", color: "#3e9879" },
   }),
   rabbit: pet({
     species: "rabbit",
@@ -66,6 +81,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Calm, gentle daily check-ins",
     palette: ["#ffc2b0", "#ffe4d6", "#bff0dc"],
     theme: "aurora",
+    accessory: { label: "Scarf", color: "#93c49c" },
   }),
   dragon: pet({
     species: "dragon",
@@ -86,6 +102,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Letting go of old habits",
     palette: ["#c9f2b8", "#d9c4ff", "#ffe3a3"],
     theme: "garden",
+    accessory: { label: "Sun hat", color: "#f0ae32" },
   }),
   horse: pet({
     species: "horse",
@@ -96,6 +113,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Getting active again",
     palette: ["#ffb0a8", "#ffe1a8", "#a8e6f0"],
     theme: "aurora",
+    accessory: { label: "Life vest", color: "#de7352" },
   }),
   goat: pet({
     species: "goat",
@@ -106,6 +124,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Stress relief and better sleep",
     palette: ["#d6f2a0", "#fff4b8", "#a8e8e0"],
     theme: "garden",
+    accessory: { label: "Bow", color: "#f0cb76" },
   }),
   monkey: pet({
     species: "monkey",
@@ -116,6 +135,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Reconnecting with people you trust",
     palette: ["#f2cba0", "#ffd9e0", "#a8e6dc"],
     theme: "aurora",
+    accessory: { label: "Flower", color: "#d13126" },
   }),
   rooster: pet({
     species: "rooster",
@@ -126,6 +146,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Morning routines",
     palette: ["#fff09a", "#ffc0a8", "#a8e2f5"],
     theme: "lagoon",
+    accessory: { label: "Sailor scarf", color: "#71a3d0" },
   }),
   dog: pet({
     species: "dog",
@@ -136,6 +157,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Feeling supported and safe",
     palette: ["#b8c8ff", "#ffd8b0", "#a8ecf0"],
     theme: "lagoon",
+    accessory: { label: "Life ring", color: "#ea7358" },
   }),
   pig: pet({
     species: "pig",
@@ -146,6 +168,7 @@ export const PETS: Record<PetSpecies, PetOption> = {
     bestFor: "Self-compassion and rest",
     palette: ["#ffc2d1", "#ffffff", "#a8f0e0"],
     theme: "aurora",
+    accessory: { label: "Bow", color: "#90d0c2" },
   }),
 };
 
@@ -200,23 +223,76 @@ export function petMoodMessage(mood: PetMood, petName: string) {
 }
 
 /**
- * Colour presets a member can pick for their companion. Each one shifts the
- * hue of the companion's halo and frame (the artwork itself is left as is).
+ * Colour presets for the companion's accessory (bow tie, bandana, hat...).
+ * Each preset is a target hue, so "Ocean" looks blue on every companion.
+ * The ids are stored in the database and predate these labels; keep them stable.
  */
 export const PET_COLORS = [
-  { id: "original", label: "Original", hue: 0 },
-  { id: "dawn", label: "Dawn", hue: 50 },
-  { id: "bloom", label: "Bloom", hue: 110 },
-  { id: "sunny", label: "Sunny", hue: 165 },
-  { id: "grove", label: "Grove", hue: 220 },
-  { id: "tide", label: "Tide", hue: 290 },
+  { id: "original", label: "Original", hue: null },
+  { id: "dawn", label: "Rose", hue: 335 },
+  { id: "sunny", label: "Honey", hue: 48 },
+  { id: "bloom", label: "Mint", hue: 150 },
+  { id: "grove", label: "Ocean", hue: 212 },
+  { id: "tide", label: "Lavender", hue: 272 },
 ] as const;
 
 export type PetColor = (typeof PET_COLORS)[number]["id"];
 
 export const PET_COLOR_IDS = PET_COLORS.map((c) => c.id) as [PetColor, ...PetColor[]];
 
-export function petColorFilter(color: PetColor | undefined) {
-  const hue = PET_COLORS.find((c) => c.id === color)?.hue ?? 0;
-  return hue ? `hue-rotate(${hue}deg)` : undefined;
+/** Applies CSS/SVG `hue-rotate(deg)` to an sRGB colour (channels 0..1). */
+function hueRotateRgb([r, g, b]: number[], deg: number) {
+  const a = (deg * Math.PI) / 180;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const clamp = (v: number) => Math.min(1, Math.max(0, v));
+  return [
+    clamp(r * (0.213 + c * 0.787 - s * 0.213) + g * (0.715 - c * 0.715 - s * 0.715) + b * (0.072 - c * 0.072 + s * 0.928)),
+    clamp(r * (0.213 - c * 0.213 + s * 0.143) + g * (0.715 + c * 0.285 + s * 0.14) + b * (0.072 - c * 0.072 - s * 0.283)),
+    clamp(r * (0.213 - c * 0.213 - s * 0.787) + g * (0.715 - c * 0.715 + s * 0.715) + b * (0.072 + c * 0.928 + s * 0.072)),
+  ];
+}
+
+function rgbHue([r, g, b]: number[]) {
+  const mx = Math.max(r, g, b);
+  const d = mx - Math.min(r, g, b);
+  if (!d) return 0;
+  const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
+}
+
+const hexRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+
+const rotationCache = new Map<string, number>();
+
+/**
+ * Degrees of `hue-rotate` that take this companion's accessory to the preset's
+ * colour. hue-rotate is an approximation, so we search for the angle whose
+ * result lands closest to the target hue rather than subtracting hues.
+ */
+export function petColorHue(color: PetColor | undefined, species: PetSpecies) {
+  const target = PET_COLORS.find((c) => c.id === color)?.hue ?? null;
+  const accessory = PETS[species]?.accessory;
+  if (target === null || !accessory) return 0;
+  const key = `${species}:${color}`;
+  const hit = rotationCache.get(key);
+  if (hit !== undefined) return hit;
+  const base = hexRgb(accessory.color);
+  let best = 0;
+  let bestDiff = Infinity;
+  for (let deg = 0; deg < 360; deg += 2) {
+    const d = Math.abs(rgbHue(hueRotateRgb(base, deg)) - target) % 360;
+    const diff = Math.min(d, 360 - d) + (deg > 180 ? 360 - deg : deg) * 0.001; // prefer the smaller turn on ties
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = deg;
+    }
+  }
+  rotationCache.set(key, best);
+  return best;
+}
+
+export function petColorFilter(color: PetColor | undefined, species: PetSpecies) {
+  const deg = petColorHue(color, species);
+  return deg ? `hue-rotate(${deg}deg)` : undefined;
 }
