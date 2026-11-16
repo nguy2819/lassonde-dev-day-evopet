@@ -53,7 +53,7 @@ export function ProfileView() {
       </header>
 
       <Section icon={Check} title="Your companion" description="Switch anytime. Care points and progress always come with you.">
-        <div role="radiogroup" aria-label="Companion" className="grid gap-3 sm:grid-cols-3">
+        <div role="radiogroup" aria-label="Companion" className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:grid-cols-4">
           {PET_LIST.map((p) => (
             <button
               key={p.species}
@@ -64,14 +64,12 @@ export function ProfileView() {
                 update({ species: p.species, ...(rename ? { petName: p.defaultName } : {}) });
                 if (rename) setPetName(p.defaultName);
               }}
-              className={cn("focus-ring flex items-center gap-3 rounded-2xl p-3 text-left transition", state.species === p.species ? "bg-accent-soft ring-2 ring-accent" : "bg-glass hover:bg-glass-strong")}
+              className={cn("focus-ring flex min-w-0 items-center gap-2.5 rounded-2xl p-2 text-left transition sm:gap-3 sm:p-2.5", state.species === p.species ? "bg-accent-soft ring-2 ring-accent" : "bg-glass hover:bg-glass-strong")}
             >
-              <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-full" style={{ background: `linear-gradient(135deg, ${p.palette.join(",")})` }}>
-                <Mascot species={p.species} color={state.color} size={56} withScene={false} animated={false} label={p.concept} />
-              </span>
-              <span>
-                <span className="block text-sm font-bold text-ink">{p.concept}</span>
-                <span className="text-xs text-ink-muted">{p.tagline}</span>
+              <Mascot species={p.species} size={52} withScene={false} animated={false} shape="circle" label="" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold text-ink">{p.defaultName}</span>
+                <span className="block truncate text-xs text-ink-muted">{p.concept}</span>
               </span>
             </button>
           ))}

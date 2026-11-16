@@ -15,7 +15,7 @@ import type {
   Profile,
   SharingConsent,
 } from "../types";
-import type { PetSpecies } from "../pets";
+import { PETS, type PetSpecies } from "../pets";
 
 export const uid = (n: number) => `00000000-0000-4000-8000-${n.toString().padStart(12, "0")}`;
 
@@ -65,16 +65,16 @@ interface MemberSeed {
 }
 
 const MEMBER_SEEDS: MemberSeed[] = [
-  { n: 100, pseudonym: "Member A-1042", displayName: "Alex", engagement: 0.86, scope: "checkin_summary", includeJournal: false, clinician: DEMO_IDS.clinician, species: "axolotl" },
-  { n: 101, pseudonym: "Member W-2210", displayName: "Willow", engagement: 0.92, scope: "weekly_summary", includeJournal: false, clinician: DEMO_IDS.clinician, species: "sprout" },
-  { n: 102, pseudonym: "Member K-3381", displayName: "Kai", engagement: 0.55, scope: "checkin_summary", includeJournal: true, clinician: DEMO_IDS.clinician, species: "fox", recentDip: true },
-  { n: 103, pseudonym: "Member R-4417", displayName: "River", engagement: 0.74, scope: "completion_only", includeJournal: false, clinician: DEMO_IDS.clinician, species: "axolotl" },
-  { n: 104, pseudonym: "Member S-5023", displayName: "Sol", engagement: 0.38, scope: "weekly_summary", includeJournal: false, clinician: DEMO_IDS.clinician, species: "sprout", recentDip: true },
-  { n: 105, pseudonym: "Member M-6190", displayName: "Morgan", engagement: 0.81, scope: "nothing", includeJournal: false, clinician: DEMO_IDS.clinician, species: "fox" },
-  { n: 106, pseudonym: "Member J-7254", displayName: "Jules", engagement: 0.67, scope: "checkin_summary", includeJournal: false, clinician: DEMO_IDS.clinician, species: "axolotl" },
-  { n: 107, pseudonym: "Member T-8306", displayName: "Tam", engagement: 0.9, scope: "completion_only", includeJournal: false, clinician: DEMO_IDS.clinician, species: "sprout" },
-  { n: 108, pseudonym: "Member E-9118", displayName: "Ellis", engagement: 0.61, scope: "weekly_summary", includeJournal: false, clinician: DEMO_IDS.clinician2, species: "fox" },
-  { n: 109, pseudonym: "Member N-9932", displayName: "Noor", engagement: 0.79, scope: "checkin_summary", includeJournal: false, clinician: DEMO_IDS.clinician2, species: "axolotl" },
+  { n: 100, pseudonym: "Member A-1042", displayName: "Alex", engagement: 0.86, scope: "checkin_summary", includeJournal: false, clinician: DEMO_IDS.clinician, species: "rabbit" },
+  { n: 101, pseudonym: "Member W-2210", displayName: "Willow", engagement: 0.92, scope: "weekly_summary", includeJournal: false, clinician: DEMO_IDS.clinician, species: "tiger" },
+  { n: 102, pseudonym: "Member K-3381", displayName: "Kai", engagement: 0.55, scope: "checkin_summary", includeJournal: true, clinician: DEMO_IDS.clinician, species: "dragon", recentDip: true },
+  { n: 103, pseudonym: "Member R-4417", displayName: "River", engagement: 0.74, scope: "completion_only", includeJournal: false, clinician: DEMO_IDS.clinician, species: "dog" },
+  { n: 104, pseudonym: "Member S-5023", displayName: "Sol", engagement: 0.38, scope: "weekly_summary", includeJournal: false, clinician: DEMO_IDS.clinician, species: "goat", recentDip: true },
+  { n: 105, pseudonym: "Member M-6190", displayName: "Morgan", engagement: 0.81, scope: "nothing", includeJournal: false, clinician: DEMO_IDS.clinician, species: "monkey" },
+  { n: 106, pseudonym: "Member J-7254", displayName: "Jules", engagement: 0.67, scope: "checkin_summary", includeJournal: false, clinician: DEMO_IDS.clinician, species: "pig" },
+  { n: 107, pseudonym: "Member T-8306", displayName: "Tam", engagement: 0.9, scope: "completion_only", includeJournal: false, clinician: DEMO_IDS.clinician, species: "rooster" },
+  { n: 108, pseudonym: "Member E-9118", displayName: "Ellis", engagement: 0.61, scope: "weekly_summary", includeJournal: false, clinician: DEMO_IDS.clinician2, species: "horse" },
+  { n: 109, pseudonym: "Member N-9932", displayName: "Noor", engagement: 0.79, scope: "checkin_summary", includeJournal: false, clinician: DEMO_IDS.clinician2, species: "mouse" },
 ];
 
 export interface DailyRecord {
@@ -175,7 +175,7 @@ export function buildSeed(today = demoToday()): SeedData {
     ownerId: uid(m.n),
     species: m.species,
     color: "original",
-    name: m.n === 100 ? "Evo" : m.species === "sprout" ? "Pip" : m.species === "fox" ? "Nova" : "Evo",
+    name: PETS[m.species].defaultName,
     carePoints: records.filter((r) => r.patientId === uid(m.n)).reduce((s, r) => s + r.tasksDone * 2 + (r.checkedIn ? 2 : 0), 0),
   }));
 

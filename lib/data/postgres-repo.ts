@@ -9,6 +9,7 @@ import { buildMemberRows, buildOverview } from "./analytics";
 import { ForbiddenError, type MemberDetail, type Repo, type SupporterView } from "./repo";
 import type { DailyRecord } from "./seed";
 import { canAccessDashboard, canViewAuditLog, effectiveConsent, scopeAllows, type PermissionContext } from "../permissions";
+import { normalizeSpecies } from "../pets";
 import type { Actor, Alert, AuditLog, CareTeamLink, DailyTask, Pet, Profile, SharingConsent } from "../types";
 
 type Row = Record<string, unknown>;
@@ -56,7 +57,7 @@ const toAlert = (r: Row): Alert => ({
 const toPet = (r: Row): Pet => ({
   id: r.id as string,
   ownerId: r.owner_id as string,
-  species: r.species as Pet["species"],
+  species: normalizeSpecies(r.species),
   color: (r.color ?? "original") as Pet["color"],
   name: r.name as string,
   carePoints: r.care_points as number,

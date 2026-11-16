@@ -3,7 +3,7 @@
 /*
  * EvoPet design tokens.
  * The default (:root) is the "Aurora Care" theme. Each companion re-themes the
- * patient app through [data-pet], so the same components render in all three.
+ * patient app through [data-pet-theme], so the same components render in all three.
  * Text/accent pairs are chosen for WCAG AA contrast on their own surfaces.
  */
 :root {
@@ -29,7 +29,7 @@
   --orb-3: #ffc2d1;
 }
 
-[data-pet="sprout"] {
+[data-pet-theme="garden"] {
   --bg: #f0f8ee;
   --bg-2: #fff4e6;
   --bg-3: #e8f7f1;
@@ -52,28 +52,27 @@
   --orb-3: #c9f0e4;
 }
 
-[data-pet="fox"] {
-  --bg: #121637;
-  --bg-2: #1b1f4d;
-  --bg-3: #24205a;
-  --ink: #f1f2ff;
-  --ink-muted: #bcc0e8;
-  --accent: #a898ff;
-  --accent-ink: #141838;
-  --accent-soft: rgba(168, 152, 255, 0.18);
-  --accent-2: #7fd4ff;
-  --coral: #ffab91;
-  --coral-ink: #ffc4b3;
-  --glass: rgba(255, 255, 255, 0.07);
-  --glass-strong: rgba(255, 255, 255, 0.12);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --line: rgba(255, 255, 255, 0.12);
-  --ring: #c9bfff;
-  --shadow: 0 10px 40px -12px rgba(0, 0, 0, 0.55);
-  --orb-1: #6f5cff;
-  --orb-2: #3a6bd8;
-  --orb-3: #ff9ec4;
-  color-scheme: dark;
+[data-pet-theme="lagoon"] {
+  --bg: #eefaf8;
+  --bg-2: #e6f4ff;
+  --bg-3: #fff5e6;
+  --ink: #123a3f;
+  --ink-muted: #45666a;
+  --accent: #0f6b73;
+  --accent-ink: #ffffff;
+  --accent-soft: #d3efec;
+  --accent-2: #a14f12;
+  --coral: #ff8f80;
+  --coral-ink: #a8402c;
+  --glass: rgba(255, 255, 255, 0.64);
+  --glass-strong: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.92);
+  --line: rgba(15, 90, 100, 0.13);
+  --ring: #0f6b73;
+  --shadow: 0 10px 40px -12px rgba(15, 107, 115, 0.28);
+  --orb-1: #8fe3dc;
+  --orb-2: #9fd8ff;
+  --orb-3: #ffd9a8;
 }
 
 @theme inline {
@@ -153,6 +152,41 @@ body {
 .focus-ring:focus-visible {
   outline: 3px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* Pool water over companion portraits (see components/mascot/mascot.tsx) */
+.water-caustics,
+.water-glint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.water-caustics {
+  background:
+    radial-gradient(ellipse 32% 5% at 22% 74%, rgba(255, 255, 255, 0.55), transparent 70%),
+    radial-gradient(ellipse 26% 4% at 72% 82%, rgba(255, 255, 255, 0.5), transparent 70%),
+    radial-gradient(ellipse 38% 5% at 40% 93%, rgba(255, 255, 255, 0.45), transparent 70%),
+    radial-gradient(ellipse 20% 3% at 85% 96%, rgba(255, 255, 255, 0.4), transparent 70%);
+  mix-blend-mode: soft-light;
+  animation: caustics 4.5s ease-in-out infinite alternate;
+}
+.water-glint {
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.35) 48%, transparent 60%);
+  background-size: 250% 100%;
+  mix-blend-mode: overlay;
+  animation: glint 7s ease-in-out infinite;
+}
+@keyframes caustics {
+  0% { transform: translate3d(-5%, 0, 0) scaleY(1); opacity: 0.7; }
+  100% { transform: translate3d(5%, -1.5%, 0) scaleY(1.5); opacity: 1; }
+}
+@keyframes glint {
+  0%, 30% { background-position: 150% 0; }
+  70%, 100% { background-position: -60% 0; }
+}
+@keyframes halo {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.06); opacity: 0.85; }
 }
 
 @media (prefers-reduced-motion: reduce) {

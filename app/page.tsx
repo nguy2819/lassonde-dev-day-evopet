@@ -105,10 +105,10 @@ export default function LandingPage() {
         <section id="product" className="mx-auto max-w-6xl scroll-mt-28 px-4 py-16">
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <p className="text-sm font-bold uppercase tracking-widest text-accent">Choose your companion</p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">Three companions. One gentle journey.</h2>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">Twelve companions. One gentle journey.</h2>
             <p className="mt-3 text-ink-muted">
-              Members pick the companion they want to care for. Programs can set a default that matches their audience, from
-              clinical calm to a cozy garden to a quiet midnight sky.
+              Members pick the companion they want to care for, from a mouse on a lemon float to a dragon riding a golden cloud.
+              Programs can set a default that matches their audience.
             </p>
           </div>
           <CompanionShowcase />

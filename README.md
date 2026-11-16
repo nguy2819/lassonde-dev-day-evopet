@@ -20,13 +20,9 @@ A recovery-support and care-engagement MVP. Members check in, complete small rea
 
 Members pick their companion at onboarding and can switch anytime in Profile. Progress carries over. Programs set a default (`/care/programs`).
 
-| Companion | Theme | Typical audience |
-|---|---|---|
-| **Evo** (axolotl) | Aurora Care: lavender, sky, coral | Clinics & hospitals |
-| **Pip** (sprout) | Cozy Garden: mint, peach | Students, families, community care |
-| **Nova** (fox) | Midnight Orbit: indigo, starlight (dark) | Young adults, privacy-first programs |
+Twelve plush companions, each floating in a pool: mouse, ox, tiger, rabbit, dragon, snake, horse, goat, monkey, rooster, dog and pig (catalogue in `lib/pets.ts`, artwork in `public/pets/*.webp`).
 
-The whole member app re-themes through CSS variables on `[data-pet]` (`app/globals.css`). Mascots are original inline SVGs (`components/mascot/mascot.tsx`), so no licensed artwork is used.
+Each companion maps to one of three app themes (`aurora`, `garden`, `lagoon`), applied through CSS variables on `[data-pet-theme]` (`app/globals.css`). Portraits animate with a water ripple (SVG turbulence + displacement) in `components/mascot/mascot.tsx`. Migration `0004_twelve_companions.sql` maps the old prototype species (axolotl, sprout, fox) onto the new catalogue.
 
 ### Non-punitive design
 

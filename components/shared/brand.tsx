@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -5,19 +6,17 @@ import { cn } from "@/lib/utils";
 export const DISCLAIMER_EN =
   "Not a substitute for professional medical advice. If you are in an emergency, contact your local emergency services.";
 
-export function Logo({ className, href = "/" }: { className?: string; href?: string }) {
+export function Logo({ className, href = "/", size = "md" }: { className?: string; href?: string; size?: "sm" | "md" | "lg" }) {
   return (
-    <Link href={href} className={cn("focus-ring inline-flex items-center gap-2 rounded-full", className)} aria-label="EvoPet home">
-      <span className="grid size-9 place-items-center rounded-2xl bg-[linear-gradient(135deg,#b9a8ff,#9fd8ff_60%,#ffc2d1)] shadow-[0_6px_18px_-6px_rgba(100,71,201,0.6)]">
-        <svg viewBox="0 0 24 24" className="size-5" aria-hidden>
-          <path d="M12 4c4.4 0 8 3 8 7.2 0 4-3.6 7.3-8 7.3s-8-3.3-8-7.3C4 7 7.6 4 12 4Z" fill="#fff" />
-          <path d="M9 11.5q1-1.2 2 0M13 11.5q1-1.2 2 0" stroke="#4b3aa8" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-          <path d="M10.5 14q1.5 1.3 3 0" stroke="#4b3aa8" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-        </svg>
-      </span>
-      <span className="text-lg font-extrabold tracking-tight text-ink">
-        EvoPet<span className="ml-1 hidden font-medium text-ink-muted sm:inline">Recovery Journey</span>
-      </span>
+    <Link href={href} className={cn("focus-ring inline-flex shrink-0 items-center rounded-xl", className)} aria-label="EvoPet home">
+      <Image
+        src="/logo.png"
+        alt="EvoPet"
+        width={667}
+        height={192}
+        priority
+        className={cn("w-auto", size === "sm" ? "h-7" : size === "lg" ? "h-10 sm:h-12" : "h-8 sm:h-9")}
+      />
     </Link>
   );
 }

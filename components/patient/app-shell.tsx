@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { HeartHandshake, Home, LogOut, Map, SmilePlus, UserRound } from "lucide-react";
 import { Disclaimer, Logo } from "@/components/shared/brand";
 import { usePatient } from "./patient-provider";
+import { PETS } from "@/lib/pets";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -20,7 +21,7 @@ export function AppShell({ children, displayName }: { children: React.ReactNode;
   const { state } = usePatient();
 
   return (
-    <div data-pet={state.species} className="aurora-bg min-h-screen transition-colors duration-700">
+    <div data-pet-theme={PETS[state.species].theme} className="aurora-bg min-h-screen transition-colors duration-700">
       <div className="mx-auto flex max-w-6xl gap-6 px-4 lg:px-6">
         {/* Desktop / tablet sidebar */}
         <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col py-6 md:flex">

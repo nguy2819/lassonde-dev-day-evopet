@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { PetColor, PetMood, PetSpecies } from "@/lib/pets";
+import { DEFAULT_SPECIES, normalizeSpecies, PETS, type PetColor, type PetMood, type PetSpecies } from "@/lib/pets";
 import type { ConsentScope, DailyTask, Relationship } from "@/lib/types";
 
 export interface Supporter {
@@ -33,9 +33,9 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 const DEFAULT_STATE: PatientState = {
   onboarded: false,
-  species: "axolotl",
+  species: DEFAULT_SPECIES,
   color: "original",
-  petName: "Evo",
+  petName: PETS[DEFAULT_SPECIES].defaultName,
   goals: ["Sleep more regularly", "Reach out when things feel heavy"],
   carePoints: 186,
   gentleDate: null,
@@ -77,8 +77,12 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate from storage once on mount
-      if (raw) setState({ ...DEFAULT_STATE, ...JSON.parse(raw) });
+      if (raw) {
+        const saved = { ...DEFAULT_STATE, ...JSON.parse(raw) };
+        // Older saves may hold a companion that no longer exists.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate from storage once on mount
+        setState({ ...saved, species: normalizeSpecies(saved.species) });
+      }
     } catch {
       /* storage unavailable: fall back to defaults */
     }

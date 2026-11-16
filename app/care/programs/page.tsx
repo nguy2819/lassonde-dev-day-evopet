@@ -6,9 +6,9 @@ import { PETS } from "@/lib/pets";
 export const metadata: Metadata = { title: "Programs" };
 
 const PROGRAMS = [
-  { name: "Outpatient recovery support", members: 6, companion: PETS.axolotl, steps: ["Daily check-in", "Medication reminder", "5-minute grounding"] },
-  { name: "Young adult wellbeing", members: 3, companion: PETS.fox, steps: ["Evening check-in", "Connect with someone", "Wind-down routine"] },
-  { name: "Family & community care", members: 1, companion: PETS.sprout, steps: ["Check-in", "Short walk", "Gratitude note"] },
+  { name: "Outpatient recovery support", members: 6, companion: PETS.dog, steps: ["Daily check-in", "Medication reminder", "5-minute grounding"] },
+  { name: "Young adult wellbeing", members: 3, companion: PETS.tiger, steps: ["Evening check-in", "Connect with someone", "Wind-down routine"] },
+  { name: "Family & community care", members: 1, companion: PETS.rabbit, steps: ["Check-in", "Short walk", "Gratitude note"] },
 ];
 
 export default function ProgramsPage() {

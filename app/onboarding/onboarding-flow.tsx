@@ -10,7 +10,7 @@ import { Disclaimer, Logo } from "@/components/shared/brand";
 import { usePatient } from "@/components/patient/patient-provider";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/form";
-import { PET_COLORS, PET_LIST, PETS, type PetColor, type PetSpecies } from "@/lib/pets";
+import { DEFAULT_SPECIES, PET_COLORS, PET_LIST, PETS, type PetColor, type PetSpecies } from "@/lib/pets";
 import { cn } from "@/lib/utils";
 
 const GOALS = [
@@ -31,9 +31,10 @@ export function OnboardingFlow({ displayName }: { displayName?: string }) {
   const [step, setStep] = useState(0);
   const [ackDisclaimer, setAckDisclaimer] = useState(false);
   const [ackData, setAckData] = useState(false);
-  const [species, setSpecies] = useState<PetSpecies>("axolotl");
+  const [species, setSpecies] = useState<PetSpecies>(DEFAULT_SPECIES);
   const [color, setColor] = useState<PetColor>("original");
-  const [petName, setPetName] = useState("Evo");
+  const [petName, setPetName] = useState(PETS[DEFAULT_SPECIES].defaultName);
+  const [hovered, setHovered] = useState<PetSpecies | null>(null);
   const [goals, setGoals] = useState<string[]>(["Follow my care plan"]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -69,61 +70,70 @@ export function OnboardingFlow({ displayName }: { displayName?: string }) {
   }
 
   return (
-    <div data-pet={species} className="aurora-bg min-h-screen px-4 py-6 transition-colors duration-700">
-      <div className="mx-auto max-w-3xl">
-        <div className="flex items-center justify-between">
+    <div data-pet-theme={PETS[species].theme} className="aurora-bg min-h-screen px-4 py-6 transition-colors duration-700">
+      <div className="mx-auto max-w-4xl">
+        <div className="flex items-center justify-between gap-3">
           <Logo />
           <ol className="flex gap-1.5" aria-label="Onboarding progress">
             {STEPS.map((s, i) => (
-              <li key={s} aria-current={i === step ? "step" : undefined} className={cn("h-2 rounded-full transition-all", i <= step ? "w-8 bg-accent" : "w-4 bg-line")}>
+              <li key={s} aria-current={i === step ? "step" : undefined} className={cn("h-2 rounded-full transition-all", i <= step ? "w-5 bg-accent sm:w-8" : "w-3 bg-line sm:w-4")}>
                 <span className="sr-only">{`Step ${i + 1}: ${s}${i < step ? " (done)" : ""}`}</span>
               </li>
             ))}
           </ol>
         </div>
 
-        <main id="main" className="glass-strong mt-8 rounded-[2rem] p-6 sm:p-10">
+        <main id="main" className="glass-strong mt-6 rounded-[1.75rem] p-4 sm:mt-8 sm:rounded-[2rem] sm:p-8 lg:p-10">
           <AnimatePresence mode="wait">
             <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
               {step === 0 && (
                 <section aria-labelledby="s0">
-                  <h1 id="s0" className="text-3xl font-extrabold text-ink">
+                  <h1 id="s0" className="text-2xl font-extrabold text-ink sm:text-3xl">
                     {displayName ? `Welcome, ${displayName}! ` : "Welcome! "}Choose your companion
                   </h1>
-                  <p className="mt-2 text-ink-muted">Pick the one that feels right. You can switch anytime in your profile, and your progress always comes with you.</p>
-                  <div role="radiogroup" aria-label="Companion" className="mt-6 grid gap-3 sm:grid-cols-3">
-                    {PET_LIST.map((p) => (
-                      <button
-                        key={p.species}
-                        type="button"
-                        role="radio"
-                        aria-checked={species === p.species}
-                        onClick={() => pickSpecies(p.species)}
-                        className={cn(
-                          "focus-ring relative flex flex-col items-center rounded-3xl p-4 text-center transition",
-                          species === p.species ? "bg-glass-strong ring-2 ring-accent" : "bg-glass hover:bg-glass-strong",
-                        )}
-                      >
-                        {species === p.species && <Check className="absolute right-3 top-3 size-5 text-accent" aria-hidden />}
-                        <span className="grid size-28 place-items-center overflow-hidden rounded-full" style={{ background: `linear-gradient(135deg, ${p.palette.join(",")})` }}>
-                          <Mascot species={p.species} size={112} withScene={false} animated={species === p.species} label={p.defaultName} />
-                        </span>
-                        <span className="mt-3 font-bold text-ink">{p.concept}</span>
-                        <span className="text-xs text-ink-muted">{p.tagline}</span>
-                      </button>
-                    ))}
+                  <p className="mt-2 text-sm text-ink-muted sm:text-base">Twelve friends are floating in the pool. Pick the one that feels right. You can switch anytime in your profile, and your progress always comes with you.</p>
+                  <div role="radiogroup" aria-label="Companion" className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+                    {PET_LIST.map((p) => {
+                      const on = species === p.species;
+                      return (
+                        <button
+                          key={p.species}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => pickSpecies(p.species)}
+                          onMouseEnter={() => setHovered(p.species)}
+                          onMouseLeave={() => setHovered(null)}
+                          className={cn(
+                            "focus-ring relative flex flex-col items-center rounded-3xl p-2.5 text-center transition sm:p-3",
+                            on ? "bg-glass-strong ring-2 ring-accent" : "bg-glass hover:-translate-y-0.5 hover:bg-glass-strong",
+                          )}
+                        >
+                          <Mascot species={p.species} size="fill" withScene={false} water={on || hovered === p.species} label={`${p.defaultName} the ${p.species}`} />
+                          {on && (
+                            <span className="absolute right-4 top-4 grid size-7 place-items-center rounded-full bg-accent text-accent-ink shadow-md">
+                              <Check className="size-4" aria-hidden />
+                            </span>
+                          )}
+                          <span className="mt-2 font-bold text-ink">{p.defaultName}</span>
+                          <span className="text-xs text-ink-muted">{p.concept}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <p className="mt-4 text-sm text-ink-muted">{PETS[species].description}</p>
+                  <p className="mt-4 text-sm text-ink-muted" aria-live="polite">
+                    <strong className="text-ink">{PETS[species].defaultName}:</strong> {PETS[species].description}
+                  </p>
                 </section>
               )}
 
               {step === 1 && (
                 <section aria-labelledby="s1">
-                  <h1 id="s1" className="text-3xl font-extrabold text-ink">Make it yours</h1>
+                  <h1 id="s1" className="text-2xl font-extrabold text-ink sm:text-3xl">Make it yours</h1>
                   <p className="mt-2 text-ink-muted">Pick a colour and a name. You can change both later in your profile.</p>
                   <div className="mt-6 grid items-center gap-6 sm:grid-cols-[auto_1fr]">
                     <div className="mx-auto">
-                      <Mascot species={species} color={color} mood="thriving" size={200} label={`${petName || "Your companion"}, ${PET_COLORS.find((c) => c.id === color)?.label} colour`} />
+                      <Mascot species={species} color={color} mood="thriving" size={190} label={`${petName || "Your companion"}, ${PET_COLORS.find((c) => c.id === color)?.label} colour`} />
                     </div>
                     <div className="space-y-5">
                       <div>
@@ -145,7 +155,7 @@ export function OnboardingFlow({ displayName }: { displayName?: string }) {
                   <div className="flex justify-center">
                     <Mascot species={species} color={color} mood="thriving" size={150} />
                   </div>
-                  <h1 id="s2" className="mt-4 text-center text-3xl font-extrabold text-ink">{petName.trim()} is glad you&apos;re here</h1>
+                  <h1 id="s2" className="mt-4 text-center text-2xl font-extrabold text-ink sm:text-3xl">{petName.trim()} is glad you&apos;re here</h1>
                   <p className="mx-auto mt-3 max-w-lg text-center text-ink-muted">
                     EvoPet helps you check in with yourself, keep small routines from your care plan and stay connected to people who
                     support you. It&apos;s a companion for the journey, not a replacement for your care team.
@@ -160,7 +170,7 @@ export function OnboardingFlow({ displayName }: { displayName?: string }) {
 
               {step === 3 && (
                 <section aria-labelledby="s3">
-                  <h1 id="s3" className="text-3xl font-extrabold text-ink">Your data, your choice</h1>
+                  <h1 id="s3" className="text-2xl font-extrabold text-ink sm:text-3xl">Your data, your choice</h1>
                   <p className="mt-2 text-ink-muted">Here&apos;s how EvoPet treats what you share.</p>
                   <ul className="mt-6 space-y-3">
                     {[
@@ -187,10 +197,10 @@ export function OnboardingFlow({ displayName }: { displayName?: string }) {
 
               {step === 4 && (
                 <section aria-labelledby="s4">
-                  <div className="flex items-center gap-4">
-                    <Mascot species={species} color={color} mood="thriving" size={96} withScene={false} />
+                  <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+                    <Mascot species={species} color={color} mood="thriving" size={96} withScene={false} shape="circle" />
                     <div>
-                      <h1 id="s4" className="text-3xl font-extrabold text-ink">What would you like to work toward?</h1>
+                      <h1 id="s4" className="text-2xl font-extrabold text-ink sm:text-3xl">What would you like to work toward?</h1>
                       <p className="mt-1 text-ink-muted">Choose up to 5. {petName} will keep them in mind.</p>
                     </div>
                   </div>

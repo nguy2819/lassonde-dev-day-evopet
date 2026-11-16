@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, CalendarCheck, HeartHandshake, Smile } from "lucide-react";
-import { Mascot } from "@/components/mascot/mascot";
+import { PetCarousel } from "@/components/mascot/pet-carousel";
 import { Button } from "@/components/ui/button";
 import { AuthButton } from "@/components/auth/auth-modal";
 
@@ -48,23 +48,23 @@ export function Hero() {
       </motion.div>
 
       <div className="relative mx-auto aspect-square w-full max-w-[480px]">
-        <div className="absolute inset-[8%] rounded-full bg-[radial-gradient(circle,#ffffff_0%,#e2dbff_45%,transparent_70%)] blur-2xl" aria-hidden />
+        <div className="absolute inset-[8%] rounded-full bg-[radial-gradient(circle,#ffffff_0%,#d6f3f1_45%,transparent_70%)] blur-2xl" aria-hidden />
         <div className="absolute inset-0 grid place-items-center">
-          <Mascot species="axolotl" mood="thriving" size={340} label="Evo, a friendly axolotl companion, floating in a glass orb" />
+          <PetCarousel thumbs={false} className="w-[64%] sm:w-[62%]" />
         </div>
-        <FloatCard className="left-0 top-[8%] w-44" delay={0.2}>
+        <FloatCard className="left-0 top-[4%] w-40 sm:top-[8%] sm:w-44" delay={0.2}>
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
             <Smile className="size-4 text-accent" aria-hidden /> Mood check-in
           </div>
           <div className="mt-2 flex gap-1" aria-hidden>
             {["😞", "😕", "😐", "🙂", "😊"].map((e, i) => (
-              <span key={e} className={`grid size-7 place-items-center rounded-full text-sm ${i === 3 ? "bg-accent-soft ring-2 ring-accent" : "bg-white/70"}`}>
+              <span key={e} className={`grid size-6 place-items-center rounded-full text-xs sm:size-7 sm:text-sm ${i === 3 ? "bg-accent-soft ring-2 ring-accent" : "bg-white/70"}`}>
                 {e}
               </span>
             ))}
           </div>
         </FloatCard>
-        <FloatCard className="right-0 top-[38%] w-48" delay={0.6}>
+        <FloatCard className="right-0 top-[40%] w-40 sm:w-48" delay={0.6}>
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
             <CalendarCheck className="size-4 text-accent-2" aria-hidden /> Daily plan
           </div>
@@ -74,7 +74,7 @@ export function Hero() {
             <li className="flex items-center gap-2"><span className="size-3 rounded-full border-2 border-line" aria-hidden /> 5-min grounding</li>
           </ul>
         </FloatCard>
-        <FloatCard className="bottom-[4%] left-[10%] w-52" delay={1}>
+        <FloatCard className="bottom-0 left-[4%] w-44 sm:bottom-[4%] sm:left-[10%] sm:w-52" delay={1}>
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
             <HeartHandshake className="size-4 text-coral-ink" aria-hidden /> Support circle
           </div>

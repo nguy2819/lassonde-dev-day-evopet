@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PET_COLOR_IDS } from "./pets";
+import { PET_COLOR_IDS, PET_SPECIES } from "./pets";
 
 const scale = z.number().int().min(1).max(5);
 
@@ -47,7 +47,7 @@ export const crisisEventSchema = z.object({
 export const onboardingSchema = z.object({
   acceptedDisclaimer: z.literal(true, { message: "Please acknowledge the disclaimer to continue." }),
   acceptedDataUse: z.literal(true, { message: "Please accept the data-use terms to continue." }),
-  species: z.enum(["axolotl", "sprout", "fox"]),
+  species: z.enum(PET_SPECIES),
   color: z.enum(PET_COLOR_IDS).default("original"),
   petName: z.string().trim().min(1).max(24),
   goals: z.array(z.string().max(60)).max(5).default([]),

@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import Link from "next/link";
 import { X } from "lucide-react";
 import { Mascot } from "@/components/mascot/mascot";
+import { PetCarousel } from "@/components/mascot/pet-carousel";
+import { PET_LIST } from "@/lib/pets";
 import { Logo } from "@/components/shared/brand";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { authErrorMessage } from "@/lib/auth-errors";
@@ -49,23 +51,24 @@ export function AuthModalProvider({ children, database, google }: { children: Re
         ref={ref}
         aria-labelledby="auth-dialog-title"
         onClick={(e) => e.target === ref.current && ref.current?.close()}
-        className="m-auto w-[min(56rem,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[2rem] bg-white p-0 text-ink shadow-2xl backdrop:bg-[#1b1640]/45 backdrop:backdrop-blur-sm"
+        className="m-auto w-[min(58rem,calc(100vw-1.5rem))] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-[1.75rem] sm:rounded-[2rem] bg-white p-0 text-ink shadow-2xl backdrop:bg-[#1b1640]/45 backdrop:backdrop-blur-sm"
       >
         <h2 id="auth-dialog-title" className="sr-only">
           {mode === "up" ? "Sign up" : "Log in"}
         </h2>
         <div className="grid md:grid-cols-[1fr_1.05fr]">
-          <div className="relative hidden overflow-hidden rounded-[1.6rem] bg-[radial-gradient(circle_at_30%_25%,#ffffff_0%,#e6defe_38%,#b9a8ff_75%,#9fd8ff_100%)] md:m-3 md:grid md:place-items-center" aria-hidden>
-            <div className="absolute -left-10 top-10 size-40 rounded-full bg-[#ffc2d1]/60 blur-2xl" />
+          <div className="relative hidden overflow-hidden rounded-[1.6rem] bg-[radial-gradient(circle_at_30%_25%,#ffffff_0%,#dff7f4_38%,#9fe3ea_75%,#8fd0ff_100%)] md:m-3 md:grid md:place-items-center">
+            <div aria-hidden className="absolute -left-10 top-10 size-40 rounded-full bg-[#ffc2d1]/60 blur-2xl" />
             <div className="absolute -right-6 bottom-6 size-48 rounded-full bg-[#9fd8ff]/70 blur-2xl" />
             <div className="absolute left-8 top-8 size-14 rounded-full bg-white/60 shadow-inner" />
             <div className="absolute bottom-16 left-10 size-8 rounded-full bg-white/70" />
             <div className="absolute right-10 top-20 size-6 rounded-full bg-white/80" />
-            <div className="relative py-16">
-              <Mascot species="axolotl" mood="thriving" size={280} />
+            <div className="relative w-full max-w-[19rem] px-6 py-12">
+              <PetCarousel />
+              <p className="mt-3 text-center text-xs text-ink-muted">12 companions are waiting. You&apos;ll pick yours next.</p>
             </div>
           </div>
-          <div className="relative px-6 pb-8 pt-12 sm:px-10">
+          <div className="relative px-5 pb-7 pt-12 sm:px-10 sm:pb-8">
             <button
               type="button"
               onClick={() => ref.current?.close()}
@@ -74,8 +77,16 @@ export function AuthModalProvider({ children, database, google }: { children: Re
             >
               <X className="size-5" />
             </button>
-            <div className="mb-6 flex justify-center">
-              <Logo />
+            <div className="mb-5 flex justify-center">
+              <Logo size="lg" />
+            </div>
+            {/* Phones: the companion panel is hidden, so show a peek of the pool instead. */}
+            <div className="mb-5 flex justify-center -space-x-3 md:hidden" aria-hidden>
+              {PET_LIST.slice(0, 6).map((p) => (
+                <span key={p.species} className="rounded-full ring-2 ring-white">
+                  <Mascot species={p.species} size={44} withScene={false} water={false} shape="circle" label="" />
+                </span>
+              ))}
             </div>
             <AuthForm key={session} mode={mode} onModeChange={setMode} database={database} google={google} initialError={error} />
           </div>
