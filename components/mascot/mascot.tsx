@@ -17,8 +17,11 @@ interface MascotProps {
   /** Colour preset chosen by the member (tints the halo and frame). */
   color?: PetColor;
   mood?: PetMood;
-  /** Pixel size, or "fill" to fill the parent's width as a square. */
-  size?: number | "fill";
+  /**
+   * Pixel size; "fill" fills the parent's width as a square; "contain" is the
+   * largest square that fits a parent with `container-type: size`.
+   */
+  size?: number | "fill" | "contain";
   /** Gentle bobbing plus the water ripple. */
   animated?: boolean;
   /** Ripple the water. Defaults to `animated`. */
@@ -47,13 +50,14 @@ export function Mascot({
   const move = animated && !reduce;
   const ripple = (water ?? animated) && !reduce;
   const fill = size === "fill";
+  const box = typeof size === "number" ? size : size === "contain" ? "min(100cqw, 100cqh)" : undefined;
   const radius = shape === "circle" ? "rounded-full" : "rounded-[30%]";
   const alt = label ?? `${pet.defaultName} the ${species}, ${mood.replace("-", " ")}`;
 
   return (
     <motion.div
       className={cn("relative inline-block shrink-0 select-none", fill && "aspect-square w-full", className)}
-      style={fill ? undefined : { width: size, height: size }}
+      style={fill ? undefined : { width: box, height: box }}
       animate={move ? { y: [0, -6, 0], rotate: [-1.2, 1.2, -1.2] } : undefined}
       // Stagger by species so a grid of companions doesn't bob in lockstep.
       transition={move ? { duration: 5, repeat: Infinity, ease: "easeInOut", delay: (PET_SPECIES.indexOf(pet.species) % 6) * 0.4 } : undefined}

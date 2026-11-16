@@ -69,9 +69,18 @@ export function OnboardingFlow({ displayName }: { displayName?: string }) {
     }
   }
 
+  // The companion picker is a single screen: it fills the viewport and never scrolls.
+  const fit = step === 0;
+
   return (
-    <div data-pet-theme={PETS[species].theme} className="aurora-bg min-h-screen px-4 py-6 transition-colors duration-700">
-      <div className="mx-auto max-w-4xl">
+    <div
+      data-pet-theme={PETS[species].theme}
+      className={cn(
+        "aurora-bg px-3 transition-colors duration-700 sm:px-4",
+        fit ? "flex h-dvh flex-col overflow-y-auto py-3 sm:py-5" : "min-h-dvh py-6",
+      )}
+    >
+      <div className={cn("mx-auto w-full", fit ? "flex min-h-[34rem] max-w-6xl flex-1 flex-col" : "max-w-4xl")}>
         <div className="flex items-center justify-between gap-3">
           <Logo />
           <ol className="flex gap-1.5" aria-label="Onboarding progress">
@@ -83,16 +92,29 @@ export function OnboardingFlow({ displayName }: { displayName?: string }) {
           </ol>
         </div>
 
-        <main id="main" className="glass-strong mt-6 rounded-[1.75rem] p-4 sm:mt-8 sm:rounded-[2rem] sm:p-8 lg:p-10">
+        <main
+          id="main"
+          className={cn(
+            "glass-strong rounded-[1.75rem] p-4 sm:rounded-[2rem]",
+            fit ? "mt-3 flex min-h-0 flex-1 flex-col sm:mt-5 sm:p-6 lg:p-7" : "mt-6 sm:mt-8 sm:p-8 lg:p-10",
+          )}
+        >
           <AnimatePresence mode="wait">
-            <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+            <motion.div key={step} className={cn(fit && "flex min-h-0 flex-1 flex-col")} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
               {step === 0 && (
-                <section aria-labelledby="s0">
-                  <h1 id="s0" className="text-2xl font-extrabold text-ink sm:text-3xl">
+                <section aria-labelledby="s0" className="flex min-h-0 flex-1 flex-col">
+                  <h1 id="s0" className="text-xl font-extrabold text-ink sm:text-3xl">
                     {displayName ? `Welcome, ${displayName}! ` : "Welcome! "}Choose your companion
                   </h1>
-                  <p className="mt-2 text-sm text-ink-muted sm:text-base">Twelve friends are floating in the pool. Pick the one that feels right. You can switch anytime in your profile, and your progress always comes with you.</p>
-                  <div role="radiogroup" aria-label="Companion" className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+                  <p className="mt-1 text-sm text-ink-muted sm:mt-2">
+                    Twelve friends are floating in the pool.<span className="hidden sm:inline"> You can switch anytime in your profile, and your progress always comes with you.</span>
+                  </p>
+                  {/* Rows share the remaining height, so all twelve fit on one screen without scrolling. */}
+                  <div
+                    role="radiogroup"
+                    aria-label="Companion"
+                    className="mt-3 grid min-h-0 flex-1 grid-cols-3 grid-rows-4 gap-2 sm:mt-5 sm:grid-cols-4 sm:grid-rows-3 sm:gap-3 lg:grid-cols-6 lg:grid-rows-2"
+                  >
                     {PET_LIST.map((p) => {
                       const on = species === p.species;
                       return (
@@ -105,23 +127,25 @@ export function OnboardingFlow({ displayName }: { displayName?: string }) {
                           onMouseEnter={() => setHovered(p.species)}
                           onMouseLeave={() => setHovered(null)}
                           className={cn(
-                            "focus-ring relative flex flex-col items-center rounded-3xl p-2.5 text-center transition sm:p-3",
-                            on ? "bg-glass-strong ring-2 ring-accent" : "bg-glass hover:-translate-y-0.5 hover:bg-glass-strong",
+                            "focus-ring relative flex min-h-0 flex-col items-center rounded-2xl p-1.5 text-center transition sm:rounded-3xl sm:p-2",
+                            on ? "bg-glass-strong ring-2 ring-accent" : "bg-glass hover:bg-glass-strong",
                           )}
                         >
-                          <Mascot species={p.species} size="fill" withScene={false} water={on || hovered === p.species} label={`${p.defaultName} the ${p.species}`} />
+                          <span className="grid min-h-0 w-full flex-1 place-items-center [container-type:size]">
+                            <Mascot species={p.species} size="contain" withScene={false} water={on || hovered === p.species} label={`${p.defaultName} the ${p.species}`} />
+                          </span>
                           {on && (
-                            <span className="absolute right-4 top-4 grid size-7 place-items-center rounded-full bg-accent text-accent-ink shadow-md">
-                              <Check className="size-4" aria-hidden />
+                            <span className="absolute right-1 top-1 grid size-5 place-items-center rounded-full bg-accent text-accent-ink shadow-md sm:right-2 sm:top-2 sm:size-6">
+                              <Check className="size-3 sm:size-4" aria-hidden />
                             </span>
                           )}
-                          <span className="mt-2 font-bold text-ink">{p.defaultName}</span>
-                          <span className="text-xs text-ink-muted">{p.concept}</span>
+                          <span className="mt-1 shrink-0 text-xs font-bold leading-tight text-ink sm:text-sm">{p.defaultName}</span>
+                          <span className="hidden shrink-0 text-[11px] leading-tight text-ink-muted md:block">{p.concept}</span>
                         </button>
                       );
                     })}
                   </div>
-                  <p className="mt-4 text-sm text-ink-muted" aria-live="polite">
+                  <p className="mt-3 line-clamp-2 shrink-0 text-xs text-ink-muted sm:text-sm" aria-live="polite">
                     <strong className="text-ink">{PETS[species].defaultName}:</strong> {PETS[species].description}
                   </p>
                 </section>
@@ -227,7 +251,7 @@ export function OnboardingFlow({ displayName }: { displayName?: string }) {
             </motion.div>
           </AnimatePresence>
 
-          <div className="mt-8 flex items-center justify-between gap-3">
+          <div className={cn("flex shrink-0 items-center justify-between gap-3", fit ? "mt-3 sm:mt-5" : "mt-8")}>
             <Button variant="ghost" onClick={() => setStep(step - 1)} disabled={step === 0 || saving}>
               <ArrowLeft /> Back
             </Button>

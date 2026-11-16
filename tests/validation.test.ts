@@ -83,7 +83,7 @@ describe("crisisEventSchema", () => {
 
 describe("onboardingSchema", () => {
   it("requires both acknowledgements", () => {
-    const base = { species: "tiger", petName: "Tigo", goals: [] };
+    const base = { species: "tiger", petName: "Tiggy", goals: [] };
     expect(onboardingSchema.safeParse({ ...base, acceptedDisclaimer: true, acceptedDataUse: true }).success).toBe(true);
     expect(onboardingSchema.safeParse({ ...base, acceptedDisclaimer: false, acceptedDataUse: true }).success).toBe(false);
   });
