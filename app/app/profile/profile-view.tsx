@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, BellRing, Check, Download, LifeBuoy, Loader2, ShieldCheck, Target, Trash2 } from "lucide-react";
 import { Mascot } from "@/components/mascot/mascot";
+import { PetColorPicker } from "@/components/mascot/color-picker";
 import { usePatient } from "@/components/patient/patient-provider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -66,7 +67,7 @@ export function ProfileView() {
               className={cn("focus-ring flex items-center gap-3 rounded-2xl p-3 text-left transition", state.species === p.species ? "bg-accent-soft ring-2 ring-accent" : "bg-glass hover:bg-glass-strong")}
             >
               <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-full" style={{ background: `linear-gradient(135deg, ${p.palette.join(",")})` }}>
-                <Mascot species={p.species} size={56} withScene={false} animated={false} label={p.concept} />
+                <Mascot species={p.species} color={state.color} size={56} withScene={false} animated={false} label={p.concept} />
               </span>
               <span>
                 <span className="block text-sm font-bold text-ink">{p.concept}</span>
@@ -75,6 +76,8 @@ export function ProfileView() {
             </button>
           ))}
         </div>
+        <p className="mb-2 mt-4 text-sm font-semibold text-ink">Colour</p>
+        <PetColorPicker species={state.species} value={state.color} onChange={(color) => update({ color })} size="sm" />
         <div className="mt-4 flex max-w-sm items-end gap-2">
           <div className="flex-1">
             <Label htmlFor="pname">Name</Label>

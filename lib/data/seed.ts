@@ -174,6 +174,7 @@ export function buildSeed(today = demoToday()): SeedData {
     id: uid(2000 + m.n),
     ownerId: uid(m.n),
     species: m.species,
+    color: "original",
     name: m.n === 100 ? "Evo" : m.species === "sprout" ? "Pip" : m.species === "fox" ? "Nova" : "Evo",
     carePoints: records.filter((r) => r.patientId === uid(m.n)).reduce((s, r) => s + r.tasksDone * 2 + (r.checkedIn ? 2 : 0), 0),
   }));

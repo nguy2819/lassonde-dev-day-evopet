@@ -24,6 +24,9 @@ import { CompanionShowcase } from "@/components/marketing/companion-showcase";
 import { SiteFooter } from "@/components/marketing/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AuthButton, AuthModalProvider } from "@/components/auth/auth-modal";
+import { isDatabaseConfigured } from "@/lib/env";
+import { isGoogleConfigured } from "@/lib/google";
 
 const BENEFITS = [
   { icon: MessageCircleHeart, title: "Check in with yourself", body: "A 60-second mood, energy and stress check-in with an optional private journal. No scores, no labels." },
@@ -93,6 +96,7 @@ function MiniDashboard() {
 
 export default function LandingPage() {
   return (
+    <AuthModalProvider database={isDatabaseConfigured()} google={isGoogleConfigured()}>
     <div className="aurora-bg aurora-animated min-h-screen">
       <Navbar />
       <main id="main">
@@ -238,9 +242,9 @@ export default function LandingPage() {
               Try the member experience or the care-team dashboard. Everything in this demo uses fictional data.
             </p>
             <div className="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button asChild size="lg" className="bg-white text-[#3b2a8f] shadow-none hover:bg-white/90">
-                <Link href="/sign-in?persona=patient">Start your journey</Link>
-              </Button>
+              <AuthButton mode="up" size="lg" className="bg-white text-[#3b2a8f] shadow-none hover:bg-white/90">
+                Start your journey
+              </AuthButton>
               <Button asChild size="lg" variant="outline" className="border-white/60 text-white hover:bg-white/10">
                 <Link href="/sign-in?persona=clinician">For care teams</Link>
               </Button>
@@ -250,5 +254,6 @@ export default function LandingPage() {
       </main>
       <SiteFooter />
     </div>
+    </AuthModalProvider>
   );
 }

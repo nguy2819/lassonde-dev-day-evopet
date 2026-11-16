@@ -12,7 +12,7 @@ import type {
   Pet,
   SharingConsent,
 } from "../types";
-import type { PetSpecies } from "../pets";
+import type { PetColor, PetSpecies } from "../pets";
 import type { DailyRecord } from "./seed";
 
 export class ForbiddenError extends Error {
@@ -44,6 +44,7 @@ export interface SupporterView {
 
 export interface OnboardingInput {
   species: PetSpecies;
+  color: PetColor;
   petName: string;
   goals: string[];
 }

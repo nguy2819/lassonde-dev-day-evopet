@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/shared/brand";
 import { Button } from "@/components/ui/button";
+import { AuthButton } from "@/components/auth/auth-modal";
 
 const LINKS = [
   { href: "#product", label: "Product" },
@@ -29,12 +29,12 @@ export function Navbar() {
           ))}
         </ul>
         <div className="hidden items-center gap-2 lg:flex">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-          <Button asChild variant="gradient" size="sm">
-            <Link href="/sign-in?persona=patient">Start your journey</Link>
-          </Button>
+          <AuthButton mode="in" variant="ghost" size="sm">
+            Sign in
+          </AuthButton>
+          <AuthButton mode="up" variant="gradient" size="sm">
+            Start your journey
+          </AuthButton>
         </div>
         <Button variant="ghost" size="icon" className="lg:hidden" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} aria-controls="mobile-menu" onClick={() => setOpen(!open)}>
           {open ? <X /> : <Menu />}
@@ -52,12 +52,12 @@ export function Navbar() {
             ))}
           </ul>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <Button asChild variant="outline">
-              <Link href="/sign-in">Sign in</Link>
-            </Button>
-            <Button asChild variant="gradient">
-              <Link href="/sign-in?persona=patient">Start</Link>
-            </Button>
+            <AuthButton mode="in" variant="outline">
+              Sign in
+            </AuthButton>
+            <AuthButton mode="up" variant="gradient">
+              Start
+            </AuthButton>
           </div>
         </div>
       )}

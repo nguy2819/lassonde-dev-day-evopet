@@ -130,10 +130,10 @@ export const demoRepo: Repo = {
     const s = store();
     let pet = s.pets.find((p) => p.ownerId === actor.id);
     if (!pet) {
-      pet = { id: crypto.randomUUID(), ownerId: actor.id, species: input.species, name: input.petName, carePoints: 0 };
+      pet = { id: crypto.randomUUID(), ownerId: actor.id, species: input.species, color: input.color, name: input.petName, carePoints: 0 };
       s.pets.push(pet);
     } else {
-      Object.assign(pet, { species: input.species, name: input.petName });
+      Object.assign(pet, { species: input.species, color: input.color, name: input.petName });
     }
     await demoRepo.logAudit(actor, "onboarding.completed", "profiles/self", { species: input.species, disclaimerAcknowledged: true });
     return pet;

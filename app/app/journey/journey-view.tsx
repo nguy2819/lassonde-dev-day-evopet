@@ -44,7 +44,7 @@ export function JourneyView() {
 
       {missed.length > 0 && (
         <Card strong className="flex flex-col items-center gap-4 sm:flex-row">
-          <Mascot species={state.species} mood="steady" size={110} withScene={false} />
+          <Mascot species={state.species} color={state.color} mood="steady" size={110} withScene={false} />
           <div>
             <h2 className="text-lg font-bold text-ink">Your journey is still here</h2>
             <p className="mt-1 text-sm text-ink-muted">

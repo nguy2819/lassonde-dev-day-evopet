@@ -1,4 +1,4 @@
-import type { PetSpecies } from "./pets";
+import type { PetColor, PetSpecies } from "./pets";
 
 export type Role = "patient" | "supporter" | "clinician" | "organization_admin";
 
@@ -36,6 +36,7 @@ export interface Pet {
   id: string;
   ownerId: string;
   species: PetSpecies;
+  color: PetColor;
   name: string;
   carePoints: number;
 }

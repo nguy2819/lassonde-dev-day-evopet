@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Activity, BellRing, FolderKanban, LayoutDashboard, LogOut, Menu, ScrollText, Settings, Users, X } from "lucide-react";
-import { Logo, DISCLAIMER_VI } from "@/components/shared/brand";
+import { Logo, DISCLAIMER_EN } from "@/components/shared/brand";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -76,7 +76,7 @@ export function CareShell({ children, actorName, roleLabel, orgName, openAlerts 
             {children}
           </main>
           <footer className="mx-auto max-w-7xl px-4 pb-8 text-xs text-ink-muted sm:px-6 lg:px-8">
-            {DISCLAIMER_VI} · Demo data only. EvoPet surfaces engagement signals, not diagnoses.
+            {DISCLAIMER_EN} · Demo data only. EvoPet surfaces engagement signals, not diagnoses.
           </footer>
         </div>
       </div>

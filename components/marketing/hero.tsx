@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, CalendarCheck, HeartHandshake, Smile } from "lucide-react";
 import { Mascot } from "@/components/mascot/mascot";
 import { Button } from "@/components/ui/button";
+import { AuthButton } from "@/components/auth/auth-modal";
 
 function FloatCard({ className, delay, children }: { className: string; delay: number; children: React.ReactNode }) {
   const reduce = useReducedMotion();
@@ -37,11 +37,9 @@ export function Hero() {
           Your companion waits, your progress stays, and your support circle is one tap away.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Button asChild variant="gradient" size="lg">
-            <Link href="/sign-in?persona=patient">
-              Explore the experience <ArrowRight />
-            </Link>
-          </Button>
+          <AuthButton mode="up" variant="gradient" size="lg">
+            Start your journey <ArrowRight />
+          </AuthButton>
           <Button asChild variant="glass" size="lg">
             <a href="#care-teams">For care teams</a>
           </Button>

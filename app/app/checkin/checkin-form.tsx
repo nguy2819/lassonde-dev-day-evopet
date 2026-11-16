@@ -91,7 +91,7 @@ export function CheckinForm() {
         {result.showCareCard && <CareCard />}
         <Card strong className="text-center">
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center">
-            <Mascot species={state.species} mood={result.showCareCard ? "needs-care" : "thriving"} size={180} />
+            <Mascot species={state.species} color={state.color} mood={result.showCareCard ? "needs-care" : "thriving"} size={180} />
             <h1 className="mt-2 text-2xl font-extrabold text-ink">Check-in saved</h1>
             <p className="mt-2 max-w-md text-ink-muted" role="status">{result.message}</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">

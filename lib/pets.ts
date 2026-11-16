@@ -84,3 +84,25 @@ export function petMoodMessage(mood: PetMood, petName: string) {
       return `${petName} could use a little care, and so could you. Your progress is safe. Let's take one gentle step together.`;
   }
 }
+
+/**
+ * Colour presets a member can pick for their companion. Each one shifts the
+ * whole companion's hue, so it works for every species.
+ */
+export const PET_COLORS = [
+  { id: "original", label: "Original", hue: 0 },
+  { id: "dawn", label: "Dawn", hue: 50 },
+  { id: "bloom", label: "Bloom", hue: 110 },
+  { id: "sunny", label: "Sunny", hue: 165 },
+  { id: "grove", label: "Grove", hue: 220 },
+  { id: "tide", label: "Tide", hue: 290 },
+] as const;
+
+export type PetColor = (typeof PET_COLORS)[number]["id"];
+
+export const PET_COLOR_IDS = PET_COLORS.map((c) => c.id) as [PetColor, ...PetColor[]];
+
+export function petColorFilter(color: PetColor | undefined) {
+  const hue = PET_COLORS.find((c) => c.id === color)?.hue ?? 0;
+  return hue ? `hue-rotate(${hue}deg)` : undefined;
+}

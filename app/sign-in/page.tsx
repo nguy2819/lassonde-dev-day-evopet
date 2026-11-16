@@ -4,13 +4,22 @@ import { Logo, Disclaimer } from "@/components/shared/brand";
 import { Skeleton } from "@/components/ui/states";
 import { SignInPanel } from "./sign-in-panel";
 import { isDatabaseConfigured, isDemoLoginEnabled } from "@/lib/env";
+import { isGoogleConfigured } from "@/lib/google";
+import { authErrorMessage } from "@/lib/auth-errors";
 
 export const metadata: Metadata = { title: "Sign in" };
 
 async function Panel({ searchParams }: { searchParams: PageProps<"/sign-in">["searchParams"] }) {
-  const { persona } = await searchParams;
+  const { persona, mode, error } = await searchParams;
   return (
-    <SignInPanel database={isDatabaseConfigured()} demoEnabled={isDemoLoginEnabled()} highlight={typeof persona === "string" ? persona : undefined} />
+    <SignInPanel
+      database={isDatabaseConfigured()}
+      google={isGoogleConfigured()}
+      demoEnabled={isDemoLoginEnabled()}
+      highlight={typeof persona === "string" ? persona : undefined}
+      initialMode={mode === "up" ? "up" : "in"}
+      initialError={authErrorMessage(typeof error === "string" ? error : null)}
+    />
   );
 }
 

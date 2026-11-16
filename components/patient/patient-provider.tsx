@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { PetMood, PetSpecies } from "@/lib/pets";
+import type { PetColor, PetMood, PetSpecies } from "@/lib/pets";
 import type { ConsentScope, DailyTask, Relationship } from "@/lib/types";
 
 export interface Supporter {
@@ -17,6 +17,7 @@ export interface Supporter {
 export interface PatientState {
   onboarded: boolean;
   species: PetSpecies;
+  color: PetColor;
   petName: string;
   goals: string[];
   carePoints: number;
@@ -33,6 +34,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const DEFAULT_STATE: PatientState = {
   onboarded: false,
   species: "axolotl",
+  color: "original",
   petName: "Evo",
   goals: ["Sleep more regularly", "Reach out when things feel heavy"],
   carePoints: 186,

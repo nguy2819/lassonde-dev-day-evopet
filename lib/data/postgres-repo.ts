@@ -57,6 +57,7 @@ const toPet = (r: Row): Pet => ({
   id: r.id as string,
   ownerId: r.owner_id as string,
   species: r.species as Pet["species"],
+  color: (r.color ?? "original") as Pet["color"],
   name: r.name as string,
   carePoints: r.care_points as number,
 });
@@ -230,11 +231,11 @@ export const postgresRepo: Repo = {
     return withUser(actor.id, async (sql) => {
       await sql(`update profiles set goals = $2, onboarded_at = now(), disclaimer_acknowledged_at = now() where id = $1`, [actor.id, input.goals]);
       const [pet] = await sql(
-        `insert into pets (owner_id, species, name) values ($1, $2, $3)
-         on conflict (owner_id) do update set species = excluded.species, name = excluded.name returning *`,
-        [actor.id, input.species, input.petName],
+        `insert into pets (owner_id, species, name, color) values ($1, $2, $3, $4)
+         on conflict (owner_id) do update set species = excluded.species, name = excluded.name, color = excluded.color, updated_at = now() returning *`,
+        [actor.id, input.species, input.petName, input.color],
       );
-      await audit(sql, actor, "onboarding.completed", "profiles/self", { species: input.species, disclaimerAcknowledged: true });
+      await audit(sql, actor, "onboarding.completed", "profiles/self", { species: input.species, color: input.color, disclaimerAcknowledged: true });
       return toPet(pet);
     });
   },

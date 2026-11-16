@@ -2,8 +2,6 @@ import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const DISCLAIMER_VI =
-  "Không thay thế tư vấn y tế chuyên nghiệp. Nếu bạn đang trong tình huống khẩn cấp, hãy liên hệ dịch vụ cấp cứu tại địa phương.";
 export const DISCLAIMER_EN =
   "Not a substitute for professional medical advice. If you are in an emergency, contact your local emergency services.";
 
@@ -24,13 +22,12 @@ export function Logo({ className, href = "/" }: { className?: string; href?: str
   );
 }
 
-export function Disclaimer({ className, compact = false }: { className?: string; compact?: boolean }) {
+export function Disclaimer({ className }: { className?: string; compact?: boolean }) {
   return (
     <div role="note" className={cn("flex gap-3 rounded-2xl border border-line bg-glass p-4 text-sm text-ink-muted", className)}>
       <ShieldAlert className="mt-0.5 size-5 shrink-0 text-coral-ink" aria-hidden />
       <div>
-        <p className="font-semibold text-ink">{DISCLAIMER_VI}</p>
-        {!compact && <p className="mt-1">{DISCLAIMER_EN}</p>}
+        <p className="font-semibold text-ink">{DISCLAIMER_EN}</p>
       </div>
     </div>
   );

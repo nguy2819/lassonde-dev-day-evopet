@@ -7,11 +7,13 @@
  */
 import { motion, useReducedMotion } from "framer-motion";
 import { useId } from "react";
-import type { PetMood, PetSpecies } from "@/lib/pets";
+import { petColorFilter, type PetColor, type PetMood, type PetSpecies } from "@/lib/pets";
 import { cn } from "@/lib/utils";
 
 interface MascotProps {
   species: PetSpecies;
+  /** Colour preset chosen by the member (see PET_COLORS). */
+  color?: PetColor;
   mood?: PetMood;
   size?: number;
   animated?: boolean;
@@ -20,7 +22,7 @@ interface MascotProps {
   label?: string;
 }
 
-export function Mascot({ species, mood = "steady", size = 220, animated = true, withScene = true, className, label }: MascotProps) {
+export function Mascot({ species, color, mood = "steady", size = 220, animated = true, withScene = true, className, label }: MascotProps) {
   const reduce = useReducedMotion();
   const id = useId().replace(/:/g, "");
   const float = animated && !reduce;
@@ -33,7 +35,7 @@ export function Mascot({ species, mood = "steady", size = 220, animated = true, 
       animate={float ? { y: [0, -8, 0] } : undefined}
       transition={float ? { duration: 4.2, repeat: Infinity, ease: "easeInOut" } : undefined}
     >
-      <svg viewBox="0 0 200 200" width={size} height={size} role="img" aria-label={label ?? `${species} companion, ${mood.replace("-", " ")}`}>
+      <svg viewBox="0 0 200 200" width={size} height={size} style={{ filter: petColorFilter(color), transition: "filter 0.4s ease" }} role="img" aria-label={label ?? `${species} companion, ${mood.replace("-", " ")}`}>
         <Body id={id} mood={mood} scene={withScene} />
       </svg>
     </motion.div>

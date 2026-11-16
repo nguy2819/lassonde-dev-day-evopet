@@ -13,7 +13,7 @@ async function Gate() {
   if (actor.role !== "patient") redirect(homeFor(actor.role));
   return (
     <PatientProvider>
-      <OnboardingFlow />
+      <OnboardingFlow displayName={actor.displayName} />
     </PatientProvider>
   );
 }

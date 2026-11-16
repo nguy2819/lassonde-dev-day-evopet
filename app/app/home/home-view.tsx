@@ -35,7 +35,7 @@ export function HomeView() {
 
       <Card strong className="relative overflow-hidden">
         <div className="grid items-center gap-4 sm:grid-cols-[auto_1fr]">
-          <div className="mx-auto">{hydrated ? <Mascot species={state.species} mood={petMood} size={210} /> : <Skeleton className="size-[210px] rounded-full" />}</div>
+          <div className="mx-auto">{hydrated ? <Mascot species={state.species} color={state.color} mood={petMood} size={210} /> : <Skeleton className="size-[210px] rounded-full" />}</div>
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-accent">{state.petName} · {stage.label}</p>
             <p className="mt-2 text-lg font-semibold leading-snug text-ink" aria-live="polite">{petMoodMessage(petMood, state.petName)}</p>
